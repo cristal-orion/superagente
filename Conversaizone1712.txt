@@ -1,0 +1,1205 @@
+
+Ôò¡ÔöÇÔöÇÔöÇ Claude Code v2.0.70 ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔò«
+Ôöé                                                    Ôöé Tips for getting        Ôöé
+Ôöé                Welcome back Michele!               Ôöé started                 Ôöé
+Ôöé                                                    Ôöé Run /init to create a ÔÇª Ôöé
+Ôöé                     * ÔûÉÔûøÔûêÔûêÔûêÔû£Ôûî *                    Ôöé ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ Ôöé
+Ôöé                    * ÔûØÔû£ÔûêÔûêÔûêÔûêÔûêÔûøÔûÿ *                   Ôöé Recent activity         Ôöé
+Ôöé                     *  ÔûÿÔûÿ ÔûØÔûØ  *                    Ôöé No recent activity      Ôöé
+Ôöé                                                    Ôöé                         Ôöé
+Ôöé  Opus 4.5 ┬À Claude Max ┬À affinitysrl@gmail.com's   Ôöé                         Ôöé
+Ôöé  Organization                                      Ôöé                         Ôöé
+Ôöé           ~\desktop\calcolatoreimpianti            Ôöé                         Ôöé
+Ôò░ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔò»
+ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ Conversation compacted ┬À ctrl+o for history ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+  ÔÄ┐ ┬áRead frontend\index.html (305 lines)
+  ÔÄ┐ ┬áReferenced file frontend\app.js
+  ÔÄ┐ ┬áReferenced file frontend\styles.css
+  ÔÄ┐ ┬áRead task.txt (173 lines)
+  ÔÄ┐ ┬áTodo list read (4 items)
+
+ÔùÅ Continuo con l'implementazione della generazione PDF. Prima leggo i file attuali per aggiungere la funzionalit├á.
+
+ÔùÅ Read(frontend\app.js)
+  ÔÄ┐ ┬áRead 700 lines
+
+ÔùÅ Read(frontend\styles.css)
+  ÔÄ┐ ┬áRead 1013 lines
+
+ÔùÅ Ora aggiungo la funzionalit├á di generazione PDF. Inizier├▓ aggiungendo la libreria jsPDF e creando il modal per inserire il nome del cliente.
+
+ÔùÅ Update(frontend\index.html)
+  ÔÄ┐ ┬áAdded 29 lines                                                      
+       299          </main>
+       300        </div>
+       301    
+       302 +      <!-- jsPDF Library -->
+       303 +      <script src="https://cdnjs.cloudflare.com/ajax/libs/jsp
+           + df/2.5.1/jspdf.umd.min.js"></script>
+       304        <script src="./app.js"></script>
+       305 +  
+       306 +      <!-- Modal Preventivo -->
+       307 +      <div class="modal-overlay" id="pdfModal">
+       308 +        <div class="modal-content">
+       309 +          <div class="modal-header">
+       310 +            <h2>Genera Preventivo</h2>
+       311 +            <button class="modal-close" 
+           + id="modalClose">&times;</button>
+       312 +          </div>
+       313 +          <div class="modal-body">
+       314 +            <div class="field">
+       315 +              <label for="clienteName">Nome Cliente</label>
+       316 +              <input type="text" id="clienteName" 
+           + placeholder="Es. Sig. Rossi" autocomplete="off" />
+       317 +            </div>
+       318 +            <div class="field">
+       319 +              <label for="clienteIndirizzo">Indirizzo 
+           + (opzionale)</label>
+       320 +              <input type="text" id="clienteIndirizzo" 
+           + placeholder="Es. Via Roma 123, Milano" autocomplete="off" />
+       321 +            </div>
+       322 +          </div>
+       323 +          <div class="modal-footer">
+       324 +            <button class="btn btn-secondary" 
+           + id="modalCancel">Annulla</button>
+       325 +            <button class="btn btn-primary" id="generatePdf">
+       326 +              <span class="btn-icon">­ƒôä</span>
+       327 +              Genera PDF
+       328 +            </button>
+       329 +          </div>
+       330 +        </div>
+       331 +      </div>
+       332      </body>
+       333    </html>
+
+ÔùÅ Ora aggiungo il pulsante per aprire il modal nella sezione hero:
+
+ÔùÅ Update(frontend\index.html)
+  ÔÄ┐ ┬áAdded 4 lines                                                     
+       212                    <span class="comparison-value" 
+             id="costo_netto">ÔÇö</span>
+       213                  </div>
+       214                </div>
+       215 +              <button class="btn-preventivo" 
+           + id="openPdfModal">
+       216 +                <span class="btn-preventivo-icon">­ƒôä</span>
+       217 +                <span class="btn-preventivo-text">Genera 
+           + Preventivo PDF</span>
+       218 +              </button>
+       219              </div>
+       220    
+       221              <!-- Stats Cards -->
+
+ÔùÅ Aggiungo gli stili CSS per il modal e il pulsante preventivo:
+
+ÔùÅ Update(frontend\styles.css)
+  ÔÄ┐ ┬áAdded 200 lines                                                     
+       1010      0% { transform: translateX(-100%); }
+       1011      100% { transform: translateX(100%); }
+       1012    }
+       1013 +  
+       1014 +  /* ÔöÇÔöÇÔöÇ PDF Preventivo Button 
+            + ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
+       1015 +  .btn-preventivo {
+       1016 +    display: inline-flex;
+       1017 +    align-items: center;
+       1018 +    justify-content: center;
+       1019 +    gap: var(--space-sm);
+       1020 +    margin-top: var(--space-lg);
+       1021 +    padding: var(--space-md) var(--space-xl);
+       1022 +    background: linear-gradient(135deg, var(--brand-red) 0%,
+            +  var(--brand-red-light) 100%);
+       1023 +    border: none;
+       1024 +    border-radius: var(--radius-md);
+       1025 +    color: white;
+       1026 +    font-family: var(--font-sans);
+       1027 +    font-size: 1rem;
+       1028 +    font-weight: 600;
+       1029 +    cursor: pointer;
+       1030 +    transition: all var(--transition-base);
+       1031 +    position: relative;
+       1032 +    overflow: hidden;
+       1033 +    box-shadow: 0 4px 20px var(--brand-red-glow);
+       1034 +  }
+       1035 +  
+       1036 +  .btn-preventivo:hover {
+       1037 +    transform: translateY(-2px);
+       1038 +    box-shadow: 0 8px 30px var(--brand-red-glow);
+       1039 +  }
+       1040 +  
+       1041 +  .btn-preventivo:active {
+       1042 +    transform: translateY(0);
+       1043 +  }
+       1044 +  
+       1045 +  .btn-preventivo::before {
+       1046 +    content: '';
+       1047 +    position: absolute;
+       1048 +    inset: 0;
+       1049 +    background: linear-gradient(135deg, 
+            + rgba(255,255,255,0.2) 0%, transparent 50%);
+       1050 +    pointer-events: none;
+       1051 +  }
+       1052 +  
+       1053 +  .btn-preventivo-icon {
+       1054 +    font-size: 1.25rem;
+       1055 +  }
+       1056 +  
+       1057 +  .btn-preventivo-text {
+       1058 +    letter-spacing: 0.02em;
+       1059 +  }
+       1060 +  
+       1061 +  /* ÔöÇÔöÇÔöÇ Modal Styles 
+            + ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+            +  */
+       1062 +  .modal-overlay {
+       1063 +    position: fixed;
+       1064 +    inset: 0;
+       1065 +    background: rgba(0, 0, 0, 0.7);
+       1066 +    backdrop-filter: blur(8px);
+       1067 +    display: flex;
+       1068 +    align-items: center;
+       1069 +    justify-content: center;
+       1070 +    z-index: 1000;
+       1071 +    opacity: 0;
+       1072 +    visibility: hidden;
+       1073 +    transition: all var(--transition-base);
+       1074 +  }
+       1075 +  
+       1076 +  .modal-overlay.active {
+       1077 +    opacity: 1;
+       1078 +    visibility: visible;
+       1079 +  }
+       1080 +  
+       1081 +  .modal-content {
+       1082 +    background: var(--bg-elevated);
+       1083 +    border: 1px solid var(--border-default);
+       1084 +    border-radius: var(--radius-xl);
+       1085 +    width: 90%;
+       1086 +    max-width: 480px;
+       1087 +    box-shadow: var(--shadow-lg);
+       1088 +    transform: scale(0.9) translateY(20px);
+       1089 +    transition: transform var(--transition-base);
+       1090 +  }
+       1091 +  
+       1092 +  .modal-overlay.active .modal-content {
+       1093 +    transform: scale(1) translateY(0);
+       1094 +  }
+       1095 +  
+       1096 +  .modal-header {
+       1097 +    display: flex;
+       1098 +    align-items: center;
+       1099 +    justify-content: space-between;
+       1100 +    padding: var(--space-lg);
+       1101 +    border-bottom: 1px solid var(--border-subtle);
+       1102 +  }
+       1103 +  
+       1104 +  .modal-header h2 {
+       1105 +    font-size: 1.25rem;
+       1106 +    font-weight: 700;
+       1107 +    color: var(--text-primary);
+       1108 +  }
+       1109 +  
+       1110 +  .modal-close {
+       1111 +    width: 36px;
+       1112 +    height: 36px;
+       1113 +    display: flex;
+       1114 +    align-items: center;
+       1115 +    justify-content: center;
+       1116 +    background: transparent;
+       1117 +    border: 1px solid var(--border-subtle);
+       1118 +    border-radius: var(--radius-sm);
+       1119 +    color: var(--text-secondary);
+       1120 +    font-size: 1.5rem;
+       1121 +    cursor: pointer;
+       1122 +    transition: all var(--transition-fast);
+       1123 +  }
+       1124 +  
+       1125 +  .modal-close:hover {
+       1126 +    background: var(--bg-hover);
+       1127 +    border-color: var(--brand-red);
+       1128 +    color: var(--brand-red);
+       1129 +  }
+       1130 +  
+       1131 +  .modal-body {
+       1132 +    padding: var(--space-lg);
+       1133 +    display: flex;
+       1134 +    flex-direction: column;
+       1135 +    gap: var(--space-md);
+       1136 +  }
+       1137 +  
+       1138 +  .modal-body input[type="text"] {
+       1139 +    width: 100%;
+       1140 +    padding: var(--space-md);
+       1141 +    background: var(--bg-surface);
+       1142 +    border: 1px solid var(--border-subtle);
+       1143 +    border-radius: var(--radius-sm);
+       1144 +    color: var(--text-primary);
+       1145 +    font-family: var(--font-sans);
+       1146 +    font-size: 1rem;
+       1147 +    transition: all var(--transition-fast);
+       1148 +    outline: none;
+       1149 +  }
+       1150 +  
+       1151 +  .modal-body input[type="text"]:focus {
+       1152 +    border-color: var(--brand-red);
+       1153 +    box-shadow: 0 0 0 3px var(--brand-red-glow);
+       1154 +  }
+       1155 +  
+       1156 +  .modal-body input[type="text"]::placeholder {
+       1157 +    color: var(--text-muted);
+       1158 +  }
+       1159 +  
+       1160 +  .modal-footer {
+       1161 +    display: flex;
+       1162 +    align-items: center;
+       1163 +    justify-content: flex-end;
+       1164 +    gap: var(--space-md);
+       1165 +    padding: var(--space-lg);
+       1166 +    border-top: 1px solid var(--border-subtle);
+       1167 +  }
+       1168 +  
+       1169 +  .btn {
+       1170 +    display: inline-flex;
+       1171 +    align-items: center;
+       1172 +    justify-content: center;
+       1173 +    gap: var(--space-sm);
+       1174 +    padding: var(--space-sm) var(--space-lg);
+       1175 +    border-radius: var(--radius-sm);
+       1176 +    font-family: var(--font-sans);
+       1177 +    font-size: 0.9375rem;
+       1178 +    font-weight: 600;
+       1179 +    cursor: pointer;
+       1180 +    transition: all var(--transition-fast);
+       1181 +    border: none;
+       1182 +  }
+       1183 +  
+       1184 +  .btn-secondary {
+       1185 +    background: var(--bg-surface);
+       1186 +    border: 1px solid var(--border-default);
+       1187 +    color: var(--text-secondary);
+       1188 +  }
+       1189 +  
+       1190 +  .btn-secondary:hover {
+       1191 +    background: var(--bg-hover);
+       1192 +    color: var(--text-primary);
+       1193 +  }
+       1194 +  
+       1195 +  .btn-primary {
+       1196 +    background: linear-gradient(135deg, var(--brand-red) 0%,
+            +  var(--brand-red-light) 100%);
+       1197 +    color: white;
+       1198 +    box-shadow: 0 2px 10px var(--brand-red-glow);
+       1199 +  }
+       1200 +  
+       1201 +  .btn-primary:hover {
+       1202 +    box-shadow: 0 4px 20px var(--brand-red-glow);
+       1203 +    transform: translateY(-1px);
+       1204 +  }
+       1205 +  
+       1206 +  .btn-primary:active {
+       1207 +    transform: translateY(0);
+       1208 +  }
+       1209 +  
+       1210 +  .btn-icon {
+       1211 +    font-size: 1rem;
+       1212 +  }
+
+ÔùÅ Ora aggiungo il JavaScript per la gestione del modal e la generazione del PDF:
+
+ÔùÅ Update(frontend\app.js)
+  ÔÄ┐ ┬áAdded 505 lines                                                     
+        697    
+        698    // Start the app
+        699    init();
+        700 +  
+        701 +  // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+        702 +  // PDF Generation Module
+        703 +  // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+        704 +  
+        705 +  // ÔöÇÔöÇÔöÇ Modal Management 
+            + ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+        706 +  function initPdfModal() {
+        707 +    const modal = document.getElementById("pdfModal");
+        708 +    const openBtn = document.getElementById("openPdfModal");
+        709 +    const closeBtn = document.getElementById("modalClose");
+        710 +    const cancelBtn = 
+            + document.getElementById("modalCancel");
+        711 +    const generateBtn = 
+            + document.getElementById("generatePdf");
+        712 +    const clienteNameInput = 
+            + document.getElementById("clienteName");
+        713 +  
+        714 +    function openModal() {
+        715 +      modal.classList.add("active");
+        716 +      clienteNameInput.focus();
+        717 +    }
+        718 +  
+        719 +    function closeModal() {
+        720 +      modal.classList.remove("active");
+        721 +    }
+        722 +  
+        723 +    openBtn.addEventListener("click", openModal);
+        724 +    closeBtn.addEventListener("click", closeModal);
+        725 +    cancelBtn.addEventListener("click", closeModal);
+        726 +  
+        727 +    modal.addEventListener("click", (e) => {
+        728 +      if (e.target === modal) closeModal();
+        729 +    });
+        730 +  
+        731 +    document.addEventListener("keydown", (e) => {
+        732 +      if (e.key === "Escape" && 
+            + modal.classList.contains("active")) {
+        733 +        closeModal();
+        734 +      }
+        735 +    });
+        736 +  
+        737 +    generateBtn.addEventListener("click", () => {
+        738 +      const clienteName = clienteNameInput.value.trim() || 
+            + "Cliente";
+        739 +      const clienteIndirizzo = 
+            + document.getElementById("clienteIndirizzo").value.trim();
+        740 +  
+        741 +      if (!lastResponse) {
+        742 +        alert("Effettua prima un calcolo!");
+        743 +        return;
+        744 +      }
+        745 +  
+        746 +      generatePDF(clienteName, clienteIndirizzo, 
+            + lastResponse);
+        747 +      closeModal();
+        748 +    });
+        749 +  
+        750 +    // Enter key to generate
+        751 +    clienteNameInput.addEventListener("keydown", (e) => {
+        752 +      if (e.key === "Enter") {
+        753 +        generateBtn.click();
+        754 +      }
+        755 +    });
+        756 +  }
+        757 +  
+        758 +  // ÔöÇÔöÇÔöÇ PDF Generation 
+            + ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+        759 +  function generatePDF(clienteName, clienteIndirizzo, data) 
+            + {
+        760 +    const { jsPDF } = window.jspdf;
+        761 +    const doc = new jsPDF({
+        762 +      orientation: "portrait",
+        763 +      unit: "mm",
+        764 +      format: "a4"
+        765 +    });
+        766 +  
+        767 +    const pageWidth = 210;
+        768 +    const pageHeight = 297;
+        769 +    const margin = 20;
+        770 +    const contentWidth = pageWidth - margin * 2;
+        771 +  
+        772 +    // Colors
+        773 +    const brandRed = [196, 30, 58];
+        774 +    const darkGray = [45, 55, 72];
+        775 +    const lightGray = [100, 116, 139];
+        776 +    const white = [255, 255, 255];
+        777 +    const bgLight = [248, 250, 252];
+        778 +  
+        779 +    // Helper functions
+        780 +    function setFont(style, size) {
+        781 +      doc.setFontSize(size);
+        782 +      if (style === "bold") {
+        783 +        doc.setFont("helvetica", "bold");
+        784 +      } else if (style === "italic") {
+        785 +        doc.setFont("helvetica", "italic");
+        786 +      } else {
+        787 +        doc.setFont("helvetica", "normal");
+        788 +      }
+        789 +    }
+        790 +  
+        791 +    function drawRect(x, y, w, h, color, radius = 0) {
+        792 +      doc.setFillColor(...color);
+        793 +      if (radius > 0) {
+        794 +        doc.roundedRect(x, y, w, h, radius, radius, "F");
+        795 +      } else {
+        796 +        doc.rect(x, y, w, h, "F");
+        797 +      }
+        798 +    }
+        799 +  
+        800 +    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+        801 +    // PAGE 1: Cover Page
+        802 +    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+        803 +  
+        804 +    // Background gradient effect (simplified)
+        805 +    drawRect(0, 0, pageWidth, pageHeight, [15, 23, 42]);
+        806 +  
+        807 +    // Decorative elements
+        808 +    doc.setDrawColor(...brandRed);
+        809 +    doc.setLineWidth(3);
+        810 +    doc.line(0, 80, pageWidth, 80);
+        811 +    doc.line(0, 220, pageWidth, 220);
+        812 +  
+        813 +    // Title
+        814 +    setFont("bold", 36);
+        815 +    doc.setTextColor(...white);
+        816 +    doc.text("PREVENTIVO", pageWidth / 2, 110, { align: 
+            + "center" });
+        817 +  
+        818 +    setFont("bold", 28);
+        819 +    doc.setTextColor(...brandRed);
+        820 +    doc.text("TECNOLOGIE", pageWidth / 2, 125, { align: 
+            + "center" });
+        821 +  
+        822 +    // Solar panel icon (simplified)
+        823 +    doc.setFillColor(...brandRed);
+        824 +    doc.rect(pageWidth / 2 - 25, 140, 50, 30, "F");
+        825 +    doc.setDrawColor(...white);
+        826 +    doc.setLineWidth(0.5);
+        827 +    for (let i = 0; i < 4; i++) {
+        828 +      doc.line(pageWidth / 2 - 25 + i * 12.5, 140, pageWidth
+            +  / 2 - 25 + i * 12.5, 170);
+        829 +    }
+        830 +    for (let i = 0; i < 3; i++) {
+        831 +      doc.line(pageWidth / 2 - 25, 140 + i * 10, pageWidth /
+            +  2 + 25, 140 + i * 10);
+        832 +    }
+        833 +  
+        834 +    // Client name
+        835 +    setFont("normal", 16);
+        836 +    doc.setTextColor(...lightGray);
+        837 +    doc.text("Egregio/a", pageWidth / 2, 195, { align: 
+            + "center" });
+        838 +  
+        839 +    setFont("bold", 24);
+        840 +    doc.setTextColor(...white);
+        841 +    doc.text(clienteName, pageWidth / 2, 208, { align: 
+            + "center" });
+        842 +  
+        843 +    if (clienteIndirizzo) {
+        844 +      setFont("normal", 12);
+        845 +      doc.setTextColor(...lightGray);
+        846 +      doc.text(clienteIndirizzo, pageWidth / 2, 220, { 
+            + align: "center" });
+        847 +    }
+        848 +  
+        849 +    // Date
+        850 +    const today = new Date();
+        851 +    const dateStr = today.toLocaleDateString("it-IT", {
+        852 +      day: "numeric",
+        853 +      month: "long",
+        854 +      year: "numeric"
+        855 +    });
+        856 +    setFont("normal", 12);
+        857 +    doc.setTextColor(...lightGray);
+        858 +    doc.text(`Data: ${dateStr}`, pageWidth / 2, 250, { 
+            + align: "center" });
+        859 +  
+        860 +    // Company info footer
+        861 +    setFont("bold", 14);
+        862 +    doc.setTextColor(...brandRed);
+        863 +    doc.text("TECH SOLUTIONS", pageWidth / 2, 270, { align: 
+            + "center" });
+        864 +  
+        865 +    setFont("normal", 10);
+        866 +    doc.setTextColor(...lightGray);
+        867 +    doc.text("Il tuo partner per l'energia sostenibile", 
+            + pageWidth / 2, 278, { align: "center" });
+        868 +  
+        869 +    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+        870 +    // PAGE 2: Company Info & Guarantees
+        871 +    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+        872 +    doc.addPage();
+        873 +  
+        874 +    // Header
+        875 +    drawRect(0, 0, pageWidth, 35, brandRed);
+        876 +    setFont("bold", 18);
+        877 +    doc.setTextColor(...white);
+        878 +    doc.text("CHI SIAMO", margin, 23);
+        879 +  
+        880 +    let y = 50;
+        881 +  
+        882 +    // Company description
+        883 +    setFont("normal", 11);
+        884 +    doc.setTextColor(...darkGray);
+        885 +    const companyText = [
+        886 +      "Tech Solutions ├¿ leader nel settore delle energie 
+            + rinnovabili, specializzata nella progettazione",
+        887 +      "e installazione di impianti fotovoltaici residenziali
+            +  e commerciali. Con oltre 10 anni di esperienza",
+        888 +      "e migliaia di installazioni completate, garantiamo 
+            + qualit├á, professionalit├á e assistenza continua."
+        889 +    ];
+        890 +    companyText.forEach(line => {
+        891 +      doc.text(line, margin, y);
+        892 +      y += 6;
+        893 +    });
+        894 +  
+        895 +    y += 10;
+        896 +  
+        897 +    // Guarantees section
+        898 +    setFont("bold", 14);
+        899 +    doc.setTextColor(...brandRed);
+        900 +    doc.text("GARANZIE INCLUSE", margin, y);
+        901 +    y += 10;
+        902 +  
+        903 +    const guarantees = [
+        904 +      { title: "Garanzia Pannelli", desc: "25 anni di 
+            + garanzia sul rendimento dei pannelli solari" },
+        905 +      { title: "Garanzia Inverter", desc: "10 anni di 
+            + garanzia sull'inverter e componenti elettronici" },
+        906 +      { title: "Garanzia Installazione", desc: "5 anni di 
+            + garanzia sulla manodopera e installazione" },
+        907 +      { title: "Assistenza Post-Vendita", desc: "Supporto 
+            + tecnico dedicato e manutenzione programmata" }
+        908 +    ];
+        909 +  
+        910 +    guarantees.forEach(g => {
+        911 +      drawRect(margin, y, contentWidth, 18, bgLight, 3);
+        912 +      setFont("bold", 11);
+        913 +      doc.setTextColor(...darkGray);
+        914 +      doc.text("Ô£ô " + g.title, margin + 5, y + 7);
+        915 +      setFont("normal", 10);
+        916 +      doc.setTextColor(...lightGray);
+        917 +      doc.text(g.desc, margin + 5, y + 13);
+        918 +      y += 22;
+        919 +    });
+        920 +  
+        921 +    y += 10;
+        922 +  
+        923 +    // What's included
+        924 +    setFont("bold", 14);
+        925 +    doc.setTextColor(...brandRed);
+        926 +    doc.text("COSA ├ê INCLUSO", margin, y);
+        927 +    y += 10;
+        928 +  
+        929 +    const included = [
+        930 +      "Sopralluogo tecnico gratuito",
+        931 +      "Progettazione impianto personalizzata",
+        932 +      "Fornitura e installazione pannelli fotovoltaici",
+        933 +      "Inverter e sistema di monitoraggio",
+        934 +      "Pratiche GSE e connessione alla rete",
+        935 +      "Collaudo e certificazione impianto",
+        936 +      "Formazione all'utilizzo del sistema"
+        937 +    ];
+        938 +  
+        939 +    included.forEach(item => {
+        940 +      setFont("normal", 11);
+        941 +      doc.setTextColor(...darkGray);
+        942 +      doc.text("ÔÇó " + item, margin + 5, y);
+        943 +      y += 7;
+        944 +    });
+        945 +  
+        946 +    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+        947 +    // PAGE 3: Pricing & Calculator Results
+        948 +    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+        949 +    doc.addPage();
+        950 +  
+        951 +    // Header
+        952 +    drawRect(0, 0, pageWidth, 35, brandRed);
+        953 +    setFont("bold", 18);
+        954 +    doc.setTextColor(...white);
+        955 +    doc.text("ANALISI ECONOMICA", margin, 23);
+        956 +  
+        957 +    y = 50;
+        958 +  
+        959 +    // Current situation
+        960 +    setFont("bold", 14);
+        961 +    doc.setTextColor(...brandRed);
+        962 +    doc.text("SITUAZIONE ATTUALE", margin, y);
+        963 +    y += 10;
+        964 +  
+        965 +    drawRect(margin, y, contentWidth, 25, bgLight, 3);
+        966 +    setFont("bold", 12);
+        967 +    doc.setTextColor(...darkGray);
+        968 +    doc.text("Spesa energetica annua attuale:", margin + 5, 
+            + y + 10);
+        969 +    setFont("bold", 16);
+        970 +    doc.setTextColor(...brandRed);
+        971 +    doc.text(euro(data.spesa_annua_attuale_eur), pageWidth -
+            +  margin - 5, y + 10, { align: "right" });
+        972 +    y += 35;
+        973 +  
+        974 +    // System cost
+        975 +    setFont("bold", 14);
+        976 +    doc.setTextColor(...brandRed);
+        977 +    doc.text("INVESTIMENTO IMPIANTO", margin, y);
+        978 +    y += 10;
+        979 +  
+        980 +    const costoImpianto = numberValue("costo_impianto_eur");
+        981 +    const anniFinanziamento = 
+            + numberValue("anni_finanziamento");
+        982 +  
+        983 +    const systemCosts = [
+        984 +      { label: "Costo impianto fotovoltaico", value: 
+            + euro(costoImpianto) },
+        985 +      { label: "Rata annua finanziamento (" + 
+            + anniFinanziamento + " anni)", value: 
+            + euro(data.rata_annua_impianto_eur) },
+        986 +      { label: "Detrazione fiscale annua", value: "- " + 
+            + euro(data.detrazione_annua_eur) }
+        987 +    ];
+        988 +  
+        989 +    systemCosts.forEach((item, i) => {
+        990 +      const bgColor = i % 2 === 0 ? bgLight : white;
+        991 +      drawRect(margin, y, contentWidth, 12, bgColor);
+        992 +      setFont("normal", 11);
+        993 +      doc.setTextColor(...darkGray);
+        994 +      doc.text(item.label, margin + 5, y + 8);
+        995 +      setFont("bold", 11);
+        996 +      doc.setTextColor(i === 2 ? [16, 185, 129] : darkGray);
+        997 +      doc.text(item.value, pageWidth - margin - 5, y + 8, { 
+            + align: "right" });
+        998 +      y += 12;
+        999 +    });
+       1000 +  
+       1001 +    y += 15;
+       1002 +  
+       1003 +    // Savings
+       1004 +    setFont("bold", 14);
+       1005 +    doc.setTextColor(...brandRed);
+       1006 +    doc.text("RISPARMIO ANNUO", margin, y);
+       1007 +    y += 10;
+       1008 +  
+       1009 +    const savings = [
+       1010 +      { label: "Risparmio in bolletta (autoconsumo)", value:
+            +  euro(data.risparmio_bolletta_eur) },
+       1011 +      { label: "Ricavo vendita energia (GSE)", value: 
+            + euro(data.ricavo_gse_eur) }
+       1012 +    ];
+       1013 +  
+       1014 +    savings.forEach((item, i) => {
+       1015 +      const bgColor = i % 2 === 0 ? bgLight : white;
+       1016 +      drawRect(margin, y, contentWidth, 12, bgColor);
+       1017 +      setFont("normal", 11);
+       1018 +      doc.setTextColor(...darkGray);
+       1019 +      doc.text(item.label, margin + 5, y + 8);
+       1020 +      setFont("bold", 11);
+       1021 +      doc.setTextColor(16, 185, 129);
+       1022 +      doc.text("+ " + item.value, pageWidth - margin - 5, y 
+            + + 8, { align: "right" });
+       1023 +      y += 12;
+       1024 +    });
+       1025 +  
+       1026 +    y += 15;
+       1027 +  
+       1028 +    // Final result box
+       1029 +    drawRect(margin, y, contentWidth, 40, brandRed, 5);
+       1030 +  
+       1031 +    const delta = data.delta_vs_spesa_attuale_eur;
+       1032 +    const isPositive = delta <= 0;
+       1033 +  
+       1034 +    setFont("bold", 12);
+       1035 +    doc.setTextColor(...white);
+       1036 +    doc.text("COSTO NETTO ANNUO CON FOTOVOLTAICO:", margin +
+            +  10, y + 12);
+       1037 +  
+       1038 +    setFont("bold", 22);
+       1039 +    doc.text(euro(data.costo_netto_annuo_eur), pageWidth - 
+            + margin - 10, y + 12, { align: "right" });
+       1040 +  
+       1041 +    setFont("bold", 12);
+       1042 +    doc.text(isPositive ? "RISPARMIO:" : "DIFFERENZA:", 
+            + margin + 10, y + 30);
+       1043 +  
+       1044 +    setFont("bold", 18);
+       1045 +    const deltaText = isPositive
+       1046 +      ? euro(Math.abs(delta)) + " ALL'ANNO!"
+       1047 +      : euro(delta) + " all'anno";
+       1048 +    doc.text(deltaText, pageWidth - margin - 10, y + 30, { 
+            + align: "right" });
+       1049 +  
+       1050 +    y += 50;
+       1051 +  
+       1052 +    // Message
+       1053 +    setFont("italic", 11);
+       1054 +    doc.setTextColor(...darkGray);
+       1055 +    const messageLines = doc.splitTextToSize(data.messaggio,
+            +  contentWidth);
+       1056 +    doc.text(messageLines, pageWidth / 2, y, { align: 
+            + "center" });
+       1057 +  
+       1058 +    y += 20;
+       1059 +  
+       1060 +    // After financing note
+       1061 +    drawRect(margin, y, contentWidth, 25, [236, 253, 245], 
+            + 3);
+       1062 +    setFont("bold", 11);
+       1063 +    doc.setTextColor(5, 150, 105);
+       1064 +    doc.text("DOPO IL FINANZIAMENTO (Anno " + 
+            + (anniFinanziamento + 1) + "+):", margin + 5, y + 10);
+       1065 +  
+       1066 +    const year11 = data.cashflow_anni.find((x) => x.anno ===
+            +  anniFinanziamento + 1);
+       1067 +    if (year11) {
+       1068 +      setFont("bold", 14);
+       1069 +      doc.text("Risparmio netto: " + 
+            + euro(Math.abs(year11.costo_netto_eur)) + "/anno", margin + 
+            + 5, y + 19);
+       1070 +    }
+       1071 +  
+       1072 +    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+       1073 +    // PAGE 4: Cashflow Projection
+       1074 +    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+       1075 +    doc.addPage();
+       1076 +  
+       1077 +    // Header
+       1078 +    drawRect(0, 0, pageWidth, 35, brandRed);
+       1079 +    setFont("bold", 18);
+       1080 +    doc.setTextColor(...white);
+       1081 +    doc.text("PROIEZIONE 25 ANNI", margin, 23);
+       1082 +  
+       1083 +    y = 50;
+       1084 +  
+       1085 +    // Table header
+       1086 +    drawRect(margin, y, contentWidth, 12, darkGray);
+       1087 +    setFont("bold", 10);
+       1088 +    doc.setTextColor(...white);
+       1089 +    doc.text("Anno", margin + 10, y + 8);
+       1090 +    doc.text("Costo/Risparmio Netto", pageWidth - margin - 
+            + 10, y + 8, { align: "right" });
+       1091 +    y += 12;
+       1092 +  
+       1093 +    // Table rows
+       1094 +    data.cashflow_anni.forEach((row, i) => {
+       1095 +      const bgColor = i % 2 === 0 ? bgLight : white;
+       1096 +      drawRect(margin, y, contentWidth, 9, bgColor);
+       1097 +  
+       1098 +      setFont("normal", 9);
+       1099 +      doc.setTextColor(...darkGray);
+       1100 +      doc.text(String(row.anno), margin + 10, y + 6);
+       1101 +  
+       1102 +      const isNeg = row.costo_netto_eur <= 0;
+       1103 +      doc.setTextColor(isNeg ? [5, 150, 105] : [220, 38, 
+            + 38]);
+       1104 +      setFont("bold", 9);
+       1105 +      doc.text(euro(row.costo_netto_eur), pageWidth - margin
+            +  - 10, y + 6, { align: "right" });
+       1106 +  
+       1107 +      y += 9;
+       1108 +    });
+       1109 +  
+       1110 +    y += 15;
+       1111 +  
+       1112 +    // 25-year total
+       1113 +    const total25 = data.cashflow_anni.reduce((sum, row) => 
+            + sum + row.costo_netto_eur, 0);
+       1114 +    drawRect(margin, y, contentWidth, 20, brandRed, 3);
+       1115 +    setFont("bold", 12);
+       1116 +    doc.setTextColor(...white);
+       1117 +    doc.text("TOTALE 25 ANNI:", margin + 10, y + 13);
+       1118 +    setFont("bold", 16);
+       1119 +    const totalLabel = total25 <= 0 ? "RISPARMIO: " + 
+            + euro(Math.abs(total25)) : euro(total25);
+       1120 +    doc.text(totalLabel, pageWidth - margin - 10, y + 13, { 
+            + align: "right" });
+       1121 +  
+       1122 +    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+       1123 +    // PAGE 5: Terms & Contact
+       1124 +    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+            + ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+       1125 +    doc.addPage();
+       1126 +  
+       1127 +    // Header
+       1128 +    drawRect(0, 0, pageWidth, 35, brandRed);
+       1129 +    setFont("bold", 18);
+       1130 +    doc.setTextColor(...white);
+       1131 +    doc.text("NOTE E CONTATTI", margin, 23);
+       1132 +  
+       1133 +    y = 50;
+       1134 +  
+       1135 +    // Notes
+       1136 +    setFont("bold", 14);
+       1137 +    doc.setTextColor(...brandRed);
+       1138 +    doc.text("NOTE IMPORTANTI", margin, y);
+       1139 +    y += 10;
+       1140 +  
+       1141 +    const notes = [
+       1142 +      "ÔÇó I valori indicati sono stime basate sui dati 
+            + forniti e possono variare in base alle condizioni reali.",
+       1143 +      "ÔÇó La produzione effettiva dipende dall'orientamento, 
+            + inclinazione e ombreggiature del tetto.",
+       1144 +      "ÔÇó Il risparmio in bolletta dipende dalle abitudini di
+            +  consumo e dal profilo di utilizzo.",
+       1145 +      "ÔÇó La detrazione fiscale del 50% ├¿ soggetta alle 
+            + normative vigenti al momento dell'installazione.",
+       1146 +      "ÔÇó Il preventivo ha validit├á di 30 giorni dalla data 
+            + di emissione.",
+       1147 +      "ÔÇó I prezzi indicati sono IVA inclusa dove 
+            + applicabile."
+       1148 +    ];
+       1149 +  
+       1150 +    setFont("normal", 10);
+       1151 +    doc.setTextColor(...darkGray);
+       1152 +    notes.forEach(note => {
+       1153 +      const lines = doc.splitTextToSize(note, contentWidth);
+       1154 +      doc.text(lines, margin, y);
+       1155 +      y += lines.length * 5 + 3;
+       1156 +    });
+       1157 +  
+       1158 +    y += 15;
+       1159 +  
+       1160 +    // Contact section
+       1161 +    setFont("bold", 14);
+       1162 +    doc.setTextColor(...brandRed);
+       1163 +    doc.text("CONTATTACI", margin, y);
+       1164 +    y += 10;
+       1165 +  
+       1166 +    drawRect(margin, y, contentWidth, 60, bgLight, 5);
+       1167 +  
+       1168 +    setFont("bold", 14);
+       1169 +    doc.setTextColor(...darkGray);
+       1170 +    doc.text("TECH SOLUTIONS", margin + 10, y + 15);
+       1171 +  
+       1172 +    setFont("normal", 11);
+       1173 +    doc.setTextColor(...lightGray);
+       1174 +    doc.text("Tel: 800 123 456 (numero verde)", margin + 10,
+            +  y + 28);
+       1175 +    doc.text("Email: info@techsolutions.it", margin + 10, y 
+            + + 38);
+       1176 +    doc.text("Web: www.techsolutions.it", margin + 10, y + 
+            + 48);
+       1177 +  
+       1178 +    y += 80;
+       1179 +  
+       1180 +    // Signature area
+       1181 +    doc.setDrawColor(...lightGray);
+       1182 +    doc.setLineWidth(0.5);
+       1183 +    doc.line(margin, y, margin + 70, y);
+       1184 +    doc.line(pageWidth - margin - 70, y, pageWidth - margin,
+            +  y);
+       1185 +  
+       1186 +    setFont("normal", 9);
+       1187 +    doc.setTextColor(...lightGray);
+       1188 +    doc.text("Firma Cliente", margin + 20, y + 8);
+       1189 +    doc.text("Firma Tech Solutions", pageWidth - margin - 
+            + 45, y + 8);
+       1190 +  
+       1191 +    y += 25;
+       1192 +  
+       1193 +    // Footer
+       1194 +    setFont("italic", 9);
+       1195 +    doc.setTextColor(...lightGray);
+       1196 +    doc.text("Documento generato automaticamente il " + 
+            + dateStr, pageWidth / 2, y, { align: "center" });
+       1197 +  
+       1198 +    // Save the PDF
+       1199 +    const fileName = 
+            + `Preventivo_${clienteName.replace(/\s+/g, 
+            + "_")}_${today.toISOString().split('T')[0]}.pdf`;
+       1200 +    doc.save(fileName);
+       1201 +  }
+       1202 +  
+       1203 +  // Initialize PDF modal after DOM is ready
+       1204 +  document.addEventListener("DOMContentLoaded", 
+            + initPdfModal);
+
+ÔùÅ Verifico che tutto funzioni navigando alla pagina:
+
+ÔùÅ plugin:playwright:playwright - Navigate to a URL (MCP)(url: "http://127.0.0.1:
+                                                        5173/")
+  ÔÄ┐ ┬á### Ran Playwright code                                               
+     await page.goto('http://127.0.0.1:5173/');
+     ÔÇª +214 lines (ctrl+o to expand)
+
+ÔùÅ La pagina ├¿ caricata correttamente. Vedo che il pulsante "Genera Preventivo PDF" ├¿ visibile. Aspetto che il calcolo sia completato:
+
+ÔùÅ plugin:playwright:playwright - Wait for (MCP)(time: 2)
+  ÔÄ┐ ┬á### Result                                                            
+     Waited for 2
+     ÔÇª +41 lines (ctrl+o to expand)
+
+ÔùÅ Il calcolo ├¿ completo. Ora testo il pulsante PDF cliccando su di esso:
+
+ÔùÅ plugin:playwright:playwright - Click (MCP)(element: "Genera Preventivo PDF
+                                            button", ref: "e87")
+  ÔÄ┐ ### Ran Playwright code                                                
+    await page.getByRole('button', { name: '­ƒôä Genera Preventivo PDF' }).cl
+    ick();
+    ÔÇª +11 lines (ctrl+o to expand)
+
+  ÔÄ┐ ┬á### Page state                                                        
+     - Page URL: http://127.0.0.1:5173/
+     - Page Title: PV Sales Calculator
+     ÔÇª +249 lines (ctrl+o to expand)
+
+ÔùÅ Il modal si ├¿ aperto correttamente. Ora testo inserendo un nome cliente e generando il PDF:
+
+ÔùÅ plugin:playwright:playwright - Type text (MCP)(element: "Nome Cliente
+                                                textbox", ref: "e157", text:
+                                                "Sig. Rossi Mario")
+  ÔÄ┐ ### Ran Playwright code                                                
+    await page.getByRole('textbox', { name: 'Nome Cliente' }).fill('Sig. Ro
+    ssi Mario');
+
+
+ÔùÅ plugin:playwright:playwright - Type text (MCP)(element: "Indirizzo textbox",
+                                                ref: "e160", text: "Via Roma 45,
+                                                 20121 Milano")
+  ÔÄ┐ ### Ran Playwright code                                                
+    await page.getByRole('textbox', { name: 'Indirizzo (opzionale)' }).fill
+    ('Via Roma 45, 20121 Milano');
+
+
+ÔùÅ plugin:playwright:playwright - Click (MCP)(element: "Genera PDF button", ref:
+                                            "e163")
+  ÔÄ┐ ┬á### Ran Playwright code                                               
+     await page.getByRole('button', { name: '­ƒôä Genera PDF' }).click();
+     ÔÇª +24 lines (ctrl+o to expand)
+
+ÔùÅ C'├¿ un errore con jsPDF. Devo correggere la sintassi per roundedRect. Verifico i messaggi di console:
+
+ÔùÅ plugin:playwright:playwright - Get console messages (MCP)(level: "error")
+  ÔÄ┐ ### Result                                                             
+    Uncaught Error: Invalid argument passed to jsPDF.f3
+        at M.y.__private__.f3 (https://cdnjs.cloudflare.com/ajax/libs/jspdf
+    ÔÇª +8 lines (ctrl+o to expand)
+
+
+ÔùÅ Il problema ├¿ con il modo in cui passo i colori a jsPDF. Devo correggere la sintassi:
+
+ÔùÅ Update(frontend\app.js)
+  ÔÄ┐ ┬áAdded 5 lines, removed 1 line                                       
+        993        doc.setTextColor(...darkGray);
+        994        doc.text(item.label, margin + 5, y + 8);
+        995        setFont("bold", 11);
+        996 -      doc.setTextColor(i === 2 ? [16, 185, 129] : darkGray);
+        996 +      if (i === 2) {
+        997 +        doc.setTextColor(16, 185, 129);
+        998 +      } else {
+        999 +        doc.setTextColor(...darkGray);
+       1000 +      }
+       1001        doc.text(item.value, pageWidth - margin - 5, y + 8, { 
+              align: "right" });
+       1002        y += 12;
+       1003      });
+
+ÔùÅ Update(frontend\app.js)
+  ÔÄ┐ ┬áAdded 2 lines, removed 1 line                                       
+       1015        { label: "Ricavo vendita energia (GSE)", value: 
+              euro(data.ricavo_gse_eur) }
+       1016      ];
+       1017    
+       1018 +    const greenColor = [16, 185, 129];
+       1019      savings.forEach((item, i) => {
+       1020        const bgColor = i % 2 === 0 ? bgLight : white;
+       1021        drawRect(margin, y, contentWidth, 12, bgColor);
+     ...
+       1022        doc.setTextColor(...darkGray);
+       1023        doc.text(item.label, margin + 5, y + 8);
+       1024        setFont("bold", 11);
+       1025 -      doc.setTextColor(16, 185, 129);
+       1025 +      doc.setTextColor(...greenColor);
+       1026        doc.text("+ " + item.value, pageWidth - margin - 5, y 
+              + 8, { align: "right" });
+       1027        y += 12;
+       1028      });
+
+ÔùÅ Correggo anche le altre occorrenze di colori hard-coded:
+
+ÔùÅ Update(frontend\app.js)
+  ÔÄ┐ ┬áAdded 4 lines, removed 2 lines                                      
+       1063      y += 20;
+       1064    
+       1065      // After financing note
+       1066 -    drawRect(margin, y, contentWidth, 25, [236, 253, 245], 
+            - 3);
+       1066 +    const greenBg = [236, 253, 245];
+       1067 +    const greenText = [5, 150, 105];
+       1068 +    drawRect(margin, y, contentWidth, 25, greenBg, 3);
+       1069      setFont("bold", 11);
+       1070 -    doc.setTextColor(5, 150, 105);
+       1070 +    doc.setTextColor(...greenText);
+       1071      doc.text("DOPO IL FINANZIAMENTO (Anno " + 
+              (anniFinanziamento + 1) + "+):", margin + 5, y + 10);
+       1072    
+       1073      const year11 = data.cashflow_anni.find((x) => x.anno ===
+               anniFinanziamento + 1);
+
+ÔùÅ Update(frontend\app.js)
+  ÔÄ┐ ┬áAdded 2 lines, removed 1 line                                   
+       986        { label: "Detrazione fiscale annua", value: "- " + 
+             euro(data.detrazione_annua_eur) }
+       987      ];
+       988    
+       989 +    const detrazioneGreen = [16, 185, 129];
+       990      systemCosts.forEach((item, i) => {
+       991        const bgColor = i % 2 === 0 ? bgLight : white;
+       992        drawRect(margin, y, contentWidth, 12, bgColor);
+     ...
+        994        doc.text(item.label, margin + 5, y + 8);
+        995        setFont("bold", 11);
+        996        if (i === 2) {
+        997 -        doc.setTextColor(16, 185, 129);
+        997 +        doc.setTextColor(...detrazioneGreen);
+        998        } else {
+        999          doc.setTextColor(...darkGray);
+       1000        }
+
+ÔùÅ Update(frontend\app.js)
+  ÔÄ┐ ┬áAdded 7 lines, removed 1 line                                       
+       1099      y += 12;
+       1100    
+       1101      // Table rows
+       1102 +    const tableGreen = [5, 150, 105];
+       1103 +    const tableRed = [220, 38, 38];
+       1104      data.cashflow_anni.forEach((row, i) => {
+       1105        const bgColor = i % 2 === 0 ? bgLight : white;
+       1106        drawRect(margin, y, contentWidth, 9, bgColor);
+     ...
+       1108        doc.text(String(row.anno), margin + 10, y + 6);
+       1109    
+       1110        const isNeg = row.costo_netto_eur <= 0;
+       1111 -      doc.setTextColor(isNeg ? [5, 150, 105] : [220, 38, 
+            - 38]);
+       1111 +      if (isNeg) {
+       1112 +        doc.setTextColor(...tableGreen);
+       1113 +      } else {
+       1114 +        doc.setTextColor(...tableRed);
+       1115 +      }
+       1116        setFont("bold", 9);
+       1117        doc.text(euro(row.costo_netto_eur), pageWidth - margin
+               - 10, y + 6, { align: "right" });
+       1118    
+
+ÔùÅ Ora ricarico la pagina e provo di nuovo:
+
+ÔùÅ plugin:playwright:playwright - Navigate to a URL (MCP)(url: "http://127.0.0.1:
+                                                        5173/")
+  ÔÄ┐ ┬á### Ran Playwright code                                               
+     await page.goto('http://127.0.0.1:5173/');
+     ÔÇª +214 lines (ctrl+o to expand)
+
+ÔùÅ Aspetto il calcolo e poi testo di nuovo:
+
+ÔùÅ plugin:playwright:playwright - Wait for (MCP)(time: 2)
+  ÔÄ┐ ┬á### Result                                                            
+     Waited for 2
+     ÔÇª +41 lines (ctrl+o to expand)
+
+ÔùÅ plugin:playwright:playwright - Click (MCP)(element: "Genera Preventivo PDF
+                                            button", ref: "e87")
+  ÔÄ┐ ### Ran Playwright code                                                
+    await page.getByRole('button', { name: '­ƒôä Genera Preventivo PDF' }).cl
+    ick();
+    ÔÇª +43 lines (ctrl+o to expand)
+
+
+ÔùÅ plugin:playwright:playwright - Type text (MCP)(element: "Nome Cliente
+                                                textbox", ref: "e157", text:
+                                                "Sig. Rossi Mario")
+  ÔÄ┐ ### Ran Playwright code                                                
+    await page.getByRole('textbox', { name: 'Nome Cliente' }).fill('Sig. Ro
+    ssi Mario');
+
+
+ÔùÅ plugin:playwright:playwright - Click (MCP)(element: "Genera PDF button", ref:
+                                            "e163")
+  ÔÄ┐ ┬á### Ran Playwright code                                               
+     await page.getByRole('button', { name: '­ƒôä Genera PDF' }).click();
+     ÔÇª +15 lines (ctrl+o to expand)
+
+ÔùÅ Il PDF ├¿ stato generato con successo! Il file ├¿ stato scaricato come Preventivo_Sig._Rossi_Mario_2025-12-17.pdf.
+
+ÔùÅ plugin:playwright:playwright - Take a screenshot (MCP)(filename: "pdf-generati
+                                                        on-complete.png")
+  ÔÄ┐ ### Ran Playwright code                                                
+    // Screenshot viewport and save it as C:\Users\Michele\desktop\calcolat
+    oreimpianti\.playwright-mcp\pdf-generation-complete.png
+    ÔÇª +8 lines (ctrl+o to expand)
+
+  ÔÄ┐ ┬á[Image]
+
+ÔùÅ La funzionalit├á di generazione PDF ├¿ stata implementata con successo. Ecco un riepilogo di quello che ho aggiunto:
+
+  Funzionalit├á implementate:
+
+  1. Pulsante "Genera Preventivo PDF" - Un pulsante rosso ben visibile nella sezione hero dei risultati
+  2. Modal per inserire i dati cliente - Con campi per:
+    - Nome Cliente
+    - Indirizzo (opzionale)
+  3. PDF professionale di 5 pagine che include:
+    - Pagina 1 (Cover): Titolo "PREVENTIVO TECNOLOGIE", nome cliente, data, logo Tech Solutions
+    - Pagina 2 (Chi Siamo): Descrizione azienda, garanzie incluse (25 anni pannelli, 10 anni inverter, 5 anni installazione), cosa ├¿ incluso
+    - Pagina 3 (Analisi Economica): Spesa attuale, costi impianto, detrazione fiscale, risparmio bolletta, ricavo GSE, risultato finale con risparmio
+    - Pagina 4 (Proiezione 25 anni): Tabella dettagliata anno per anno con totale risparmio a 25 anni
+    - Pagina 5 (Note e Contatti): Note importanti, contatti azienda, spazio firme
+
+  Il PDF viene salvato automaticamente con il nome Preventivo_[NomeCliente]_[Data].pdf.
+
+ÔùÅ Il PDF scaricato si trova in: C:\Users\Michele\desktop\calcolatoreimpianti\.playwright-mcp\Preventivo-Sig-Rossi-Mario-2025-12-17.pdf
+
+  L'agente di vendita pu├▓ ora:
+  1. Fare i calcoli con il cliente
+  2. Cliccare su "Genera Preventivo PDF"
+  3. Inserire il nome del cliente
+  4. Generare un PDF professionale da inviare o stampare
+
+> ora ti faccio una domanda, se faccio una cartella con tutte le schede 
+tecniche, magari ti scrivo le istruzioni, se ad esempio clicco su impianto 
+10 kw con accumulo huawei allora tu prendi le schede tecniche dei pannelli 
+longi + le schede tecniche dell'accumulo huawei e li metti insieme dentro 
+questo preventivo, dici che lo possiamo fare? Inoltre altra domanda, se 
+facciamo una cartella ad essempio "asset" e dentro ci mettiamo il logo tech 
+solution, oppure lo sfondo da usare nel pdf, tu lo puoi fare? ├¿ solo una 
+domanda non scrivere codice 
+
+ÔùÅ Ottime domande! Ti rispondo su entrambe:
+
+  1. Schede tecniche dinamiche
+
+  S├¼, ├¿ assolutamente fattibile. L'approccio sarebbe:
+
+  - Creare una cartella tipo schede-tecniche/ con i PDF delle schede organizzati per prodotto (es. longi-hi-mo-6.pdf, huawei-luna-2000.pdf, fox-ess-inverter.pdf)
+  - Nel catalog.json (o in un file separato) mappare ogni modello impianto ai suoi componenti
+  - Quando generi il PDF, in base al modello selezionato, il sistema prende le schede tecniche giuste e le appende
+
+  Per├▓ c'├¿ un dettaglio tecnico: jsPDF da solo non pu├▓ "unire" PDF esistenti. Dovremmo usare una libreria aggiuntiva come pdf-lib che permette di:
+  - Prendere il PDF che generiamo noi
+  - Appendere le pagine delle schede tecniche esistenti
+  - Salvare tutto in un unico file
+
+  ├ê un po' pi├╣ complesso ma assolutamente realizzabile.
+
+  ---
+  2. Cartella assets per logo/sfondi
+
+  S├¼, si pu├▓ fare. jsPDF supporta l'inserimento di immagini (PNG, JPEG). Potremmo:
+
+  - Creare una cartella assets/ con logo, sfondi, icone
+  - Caricarli nel PDF come immagini di sfondo o header
+
+  L'unica cosa ├¿ che le immagini vanno convertite in base64 o caricate via JavaScript, ma ├¿ una cosa standard.
+
+  ---
+  In sintesi: Entrambe le cose sono fattibili. Se vuoi procedere, preparami la struttura delle cartelle e le istruzioni su quale modello usa quali componenti, e lo implementiamo.
+
+> ok, domanda ma attualmente la grafica del pdf l'hai gestita tu? perch├¿ 
+potrebbe venire molto meglio se ci lavorassi un po' sulla grafica e ui 
+
+ÔùÅ S├¼, l'ho creata io programmaticamente con jsPDF. ├ê una grafica "costruita a codice" - praticamente disegno rettangoli, linee e testo con coordinate X/Y.
+
+  Onestamente ├¿ molto basica al momento:
+  - Rettangoli colorati come sfondi
+  - Font Helvetica standard
+  - Nessuna immagine reale (il logo ├¿ solo testo)
+  - Layout semplice a blocchi
+
+  Pu├▓ sicuramente migliorare molto. Le opzioni sono:
+
+  1. Migliorare il design nel codice - Aggiungere il vero logo, sfondi pi├╣ elaborati, migliori proporzioni, icone, etc.
+  2. Usare un template PDF pre-disegnato - Tu (o un grafico) create un PDF template bellissimo in InDesign/Canva/Figma, e io lo uso come base inserendo solo i dati variabili nei punti giusti. Questo darebbe risultati molto pi├╣ professionali.
+  3. Approccio ibrido - Pagine statiche (cover, chi siamo) come PDF pre-fatti + pagine dinamiche (analisi economica, cashflow) generate da codice.
+
+  ---
+  Cosa preferisci?
+
+  Se mi dai un riferimento grafico (anche il PDF "Preventivo Sig. Delfino" che mi hai fatto vedere prima, o un altro stile che ti piace), posso provare a replicarlo meglio. Oppure se hai un grafico che pu├▓ creare un template, quello sarebbe l'ideale per un risultato davvero professionale.
+
+
+
