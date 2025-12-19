@@ -126,6 +126,63 @@
               </div>
             </details>
 
+            <!-- Section: Preventivo Manuale -->
+            <details class="input-section section-manual-quote">
+              <summary class="section-header">
+                <span class="section-icon">📋</span>
+                <span class="section-title">Preventivo Manuale</span>
+                <span class="section-chevron">›</span>
+              </summary>
+              <div class="section-content">
+                <div class="field">
+                  <label>Seleziona impianti (anche multipli)</label>
+                  <div class="multi-select-container" id="manualSystemsContainer">
+                    <!-- Will be populated by JS -->
+                  </div>
+                  <div class="selected-systems-summary" id="selectedSystemsSummary">
+                    <span class="summary-count">0 impianti selezionati</span>
+                    <span class="summary-total">Totale: € 0</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Tipo di pagamento</label>
+                  <div class="payment-type-selector">
+                    <label class="radio-option">
+                      <input type="radio" name="paymentType" value="rate" checked />
+                      <span class="radio-label">Finanziamento a rate</span>
+                    </label>
+                    <label class="radio-option">
+                      <input type="radio" name="paymentType" value="diretto" />
+                      <span class="radio-label">Pagamento diretto</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="field" id="manualRateOptions">
+                  <label for="manualAnniFinanziamento">Durata finanziamento</label>
+                  <div class="input-with-unit">
+                    <input id="manualAnniFinanziamento" type="number" step="1" min="1" max="20" value="10" />
+                    <span class="unit">anni</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="manualClienteName">Nome Cliente</label>
+                  <input type="text" id="manualClienteName" placeholder="Es. Sig. Rossi" />
+                </div>
+                <div class="field">
+                  <label for="manualClienteIndirizzo">Indirizzo (opzionale)</label>
+                  <input type="text" id="manualClienteIndirizzo" placeholder="Es. Via Roma 123, Milano" />
+                </div>
+                <div class="field">
+                  <label for="manualClienteNote">Note (opzionale)</label>
+                  <textarea id="manualClienteNote" rows="2" placeholder="Note aggiuntive per il preventivo"></textarea>
+                </div>
+                <button class="btn-manual-quote" id="generateManualQuote">
+                  <span class="btn-icon">📄</span>
+                  <span>Genera Preventivo Manuale</span>
+                </button>
+              </div>
+            </details>
+
             <!-- Section: Parametri Avanzati -->
             <details class="input-section">
               <summary class="section-header">
@@ -305,7 +362,7 @@
 
     <!-- jsPDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="./app.js"></script>
+    <script src="./app.js?v=9"></script>
 
     <!-- Modal Preventivo -->
     <div class="modal-overlay" id="pdfModal">
@@ -322,6 +379,10 @@
           <div class="field">
             <label for="clienteIndirizzo">Indirizzo (opzionale)</label>
             <input type="text" id="clienteIndirizzo" placeholder="Es. Via Roma 123, Milano" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="clienteNote">Note per il preventivo</label>
+            <textarea id="clienteNote" rows="3" placeholder="Es. Rata con formula di noleggio operativo" autocomplete="off"></textarea>
           </div>
         </div>
         <div class="modal-footer">

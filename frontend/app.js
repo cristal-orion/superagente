@@ -699,6 +699,571 @@ async function init() {
 init();
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Manual Quote Module - Direct Quote Generation
+// ═══════════════════════════════════════════════════════════════════════════
+
+let selectedManualSystems = [];
+
+function initManualQuote() {
+  const container = document.getElementById("manualSystemsContainer");
+  const summaryEl = document.getElementById("selectedSystemsSummary");
+  const rateOptionsEl = document.getElementById("manualRateOptions");
+  const paymentTypeRadios = document.querySelectorAll('input[name="paymentType"]');
+  const generateBtn = document.getElementById("generateManualQuote");
+
+  if (!container || !catalog) return;
+
+  // Populate multi-select with systems grouped by category
+  const grouped = groupByCategory(catalog);
+  container.innerHTML = "";
+
+  for (const [cat, items] of grouped.entries()) {
+    const groupDiv = document.createElement("div");
+    groupDiv.className = "multi-select-group";
+
+    const headerDiv = document.createElement("div");
+    headerDiv.className = "multi-select-group-header";
+    headerDiv.textContent = cat;
+    groupDiv.appendChild(headerDiv);
+
+    for (const item of items) {
+      const itemDiv = document.createElement("div");
+      itemDiv.className = "multi-select-item";
+      itemDiv.dataset.id = item.id;
+      itemDiv.dataset.price = item.prezzo_eur;
+      itemDiv.dataset.label = item.label;
+      itemDiv.dataset.potenza = item.potenza_kw;
+      itemDiv.dataset.accumulo = item.accumulo_kwh || "";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.id = `manual-${item.id}`;
+
+      const label = document.createElement("span");
+      label.className = "item-label";
+      label.textContent = item.label;
+
+      const price = document.createElement("span");
+      price.className = "item-price";
+      price.textContent = euro(item.prezzo_eur);
+
+      itemDiv.appendChild(checkbox);
+      itemDiv.appendChild(label);
+      itemDiv.appendChild(price);
+
+      // Click handler
+      itemDiv.addEventListener("click", (e) => {
+        if (e.target !== checkbox) {
+          checkbox.checked = !checkbox.checked;
+        }
+        toggleManualSystem(item, checkbox.checked, itemDiv);
+      });
+
+      checkbox.addEventListener("change", (e) => {
+        toggleManualSystem(item, e.target.checked, itemDiv);
+      });
+
+      groupDiv.appendChild(itemDiv);
+    }
+
+    container.appendChild(groupDiv);
+  }
+
+  // Payment type toggle
+  paymentTypeRadios.forEach(radio => {
+    radio.addEventListener("change", (e) => {
+      if (e.target.value === "rate") {
+        rateOptionsEl.style.display = "block";
+      } else {
+        rateOptionsEl.style.display = "none";
+      }
+    });
+  });
+
+  // Generate button
+  generateBtn.addEventListener("click", generateManualQuote);
+}
+
+function toggleManualSystem(item, isSelected, itemDiv) {
+  if (isSelected) {
+    if (!selectedManualSystems.find(s => s.id === item.id)) {
+      selectedManualSystems.push(item);
+    }
+    itemDiv.classList.add("selected");
+  } else {
+    selectedManualSystems = selectedManualSystems.filter(s => s.id !== item.id);
+    itemDiv.classList.remove("selected");
+  }
+  updateManualSummary();
+}
+
+function updateManualSummary() {
+  const summaryEl = document.getElementById("selectedSystemsSummary");
+  const count = selectedManualSystems.length;
+  const total = selectedManualSystems.reduce((sum, s) => sum + Number(s.prezzo_eur), 0);
+
+  const countText = count === 0 ? "Nessun impianto selezionato" :
+                   count === 1 ? "1 impianto selezionato" :
+                   `${count} impianti selezionati`;
+
+  summaryEl.innerHTML = `
+    <span class="summary-count">${countText}</span>
+    <span class="summary-total">Totale: ${euro(total)}</span>
+  `;
+}
+
+async function generateManualQuote() {
+  if (selectedManualSystems.length === 0) {
+    alert("Seleziona almeno un impianto!");
+    return;
+  }
+
+  const clienteName = document.getElementById("manualClienteName").value.trim() || "Cliente";
+  const clienteIndirizzo = document.getElementById("manualClienteIndirizzo").value.trim();
+  const clienteNote = document.getElementById("manualClienteNote").value.trim();
+  const paymentType = document.querySelector('input[name="paymentType"]:checked').value;
+  const anniFinanziamento = paymentType === "rate" ? Number(document.getElementById("manualAnniFinanziamento").value) : 0;
+
+  if (!pdfAssets.loaded) {
+    await initPdfAssets();
+  }
+
+  generateManualPDF(clienteName, clienteIndirizzo, clienteNote, selectedManualSystems, paymentType, anniFinanziamento);
+}
+
+// ─── Generate Manual PDF ────────────────────────────────────────────────────
+function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, systems, paymentType, anniFinanziamento) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4"
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+
+  // Register custom fonts
+  const fontsRegistered = registerFonts(doc);
+  const fontFamily = fontsRegistered ? 'ProductSans' : 'helvetica';
+
+  // Colors
+  const white = [255, 255, 255];
+  const darkBlue = [59, 82, 128];
+  const lightText = [200, 210, 230];
+
+  // Helper functions
+  function setFont(style, size) {
+    doc.setFontSize(size);
+    doc.setFont(fontFamily, style);
+  }
+
+  function addBackgroundImage(imageData) {
+    if (imageData) {
+      doc.addImage(imageData, 'PNG', 0, 0, pageWidth, pageHeight);
+    }
+  }
+
+  // Calculate totals
+  const totalPrice = systems.reduce((sum, s) => sum + Number(s.prezzo_eur), 0);
+  const totalPotenza = systems.reduce((sum, s) => sum + Number(s.potenza_kw || 0), 0);
+  const mesiFinanziamento = anniFinanziamento * 12;
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // PAGE 1: Cover Page with Background Image
+  // ═══════════════════════════════════════════════════════════════════════
+
+  if (pdfAssets.images.cover) {
+    addBackgroundImage(pdfAssets.images.cover);
+  }
+
+  // Client name on the white line at bottom
+  setFont("normal", 12);
+  doc.setTextColor(59, 82, 128);
+  doc.text("Egregio Sig. " + clienteName, 27, 287);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // PAGE 2: Company Info & Guarantees
+  // ═══════════════════════════════════════════════════════════════════════
+  doc.addPage();
+
+  if (pdfAssets.images.pageBaseClean) {
+    addBackgroundImage(pdfAssets.images.pageBaseClean);
+  }
+
+  let y = 45;
+
+  // Company description
+  setFont("normal", 11);
+  doc.setTextColor(...white);
+  const companyText = "Siamo lieti di presentarvi Tech Solutions, leader nell'energia fotovoltaica, che offre soluzioni innovative ed ecocompatibili per le vostre esigenze energetiche. Con esperienza e passione per l'innovazione, forniamo servizi di alta qualità per la produzione di energia solare, dalla progettazione all'installazione di impianti fotovoltaici, dall'integrazione di sistemi di accumulo alla manutenzione preventiva e correttiva. Lavoriamo con le tecnologie più avanzate per garantire ai nostri clienti soluzioni all'avanguardia.";
+
+  const companyLines = doc.splitTextToSize(companyText, contentWidth - 10);
+  doc.text(companyLines, margin + 5, y);
+  y += companyLines.length * 6 + 14;
+
+  // Guarantees section
+  setFont("bold", 16);
+  doc.setTextColor(255, 220, 100);
+  doc.text("Garanzie:", margin + 5, y);
+  y += 10;
+
+  const guarantees = [
+    "Garanzie rendimento impianto Fv 30 anni.",
+    "Smaltimento moduli fine ciclo vita (contributo Raee compreso)",
+    "Garanzia moduli 15 anni del Costruttore/Fornitore su difetti e mal funzionamento dei moduli",
+    "Garanzia inverter e batterie 20 anni"
+  ];
+
+  setFont("normal", 11);
+  doc.setTextColor(...white);
+  guarantees.forEach(g => {
+    doc.text("•  " + g, margin + 8, y);
+    y += 7;
+  });
+
+  y += 10;
+
+  // Included items
+  setFont("bold", 12);
+  doc.setTextColor(...lightText);
+  doc.text("Sono inclusi inoltre:", margin + 5, y);
+  y += 8;
+
+  const included = [
+    "Quadri di campo e manovra con gruppi scaricatori sovratensione",
+    "Sezionatori bipolari",
+    "Morsetti di terra",
+    "Quadri di interfaccia e protezione per la rete elettrica",
+    "Protezioni magnetotermiche trifasi",
+    "Interruttori generali magnetotermici",
+    "Cavi unipolari per collegare i moduli FV agli inverter e ai gruppi di conversione",
+    "Cavi di terra unipolari in rame flessibile isolati in PVC",
+    "Accessori per i collegamenti elettrici",
+    "Materiale necessario per garantire il regolare funzionamento dell'impianto fotovoltaico"
+  ];
+
+  setFont("normal", 10);
+  doc.setTextColor(...white);
+  included.forEach(item => {
+    const lines = doc.splitTextToSize("•  " + item, contentWidth - 20);
+    doc.text(lines, margin + 8, y);
+    y += lines.length * 5;
+  });
+
+  y += 10;
+
+  // Optional components (excluded)
+  setFont("bold", 16);
+  doc.setTextColor(255, 220, 100);
+  doc.text("Componenti opzionali:", margin + 5, y);
+  y += 8;
+
+  setFont("normal", 10);
+  doc.setTextColor(...lightText);
+  doc.text("Sono esclusi dalla presente offerta e, se necessari, da quotare separatamente:", margin + 5, y);
+  y += 8;
+
+  const excluded = [
+    "Ponteggi o Mezzi di sollevamento ove necessario",
+    "Impiantistica elettrica primaria e fino al punto di consegna",
+    "Eventuale adeguamento cabina MT lato utente",
+    "Scavi, reinterri, cavidotti, importanti opere murarie",
+    "Altro non espressamente previsto"
+  ];
+
+  setFont("normal", 10);
+  doc.setTextColor(...white);
+  excluded.forEach(item => {
+    doc.text("•  " + item, margin + 8, y);
+    y += 6;
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // PAGE 3: Solution Proposed (Systems & Pricing)
+  // ═══════════════════════════════════════════════════════════════════════
+  doc.addPage();
+
+  if (pdfAssets.images.pageBaseClean) {
+    addBackgroundImage(pdfAssets.images.pageBaseClean);
+  }
+
+  y = 45;
+
+  // Section title
+  setFont("bold", 20);
+  doc.setTextColor(255, 220, 100);
+  doc.text("Soluzione proposta", margin + 5, y);
+  y += 14;
+
+  // Intro text
+  setFont("normal", 11);
+  doc.setTextColor(...white);
+  const introText = "L'offerta include, senza alcun costo aggiuntivo, l'assistenza tecnica completa per il progetto, compresi i requisiti tecnico-amministrativi necessari per la realizzazione dell'intervento presso il Comune, Enel, ecc. Inoltre, forniamo la supervisione del cantiere e gestiamo la procedura di collegamento dell'impianto alla rete elettrica.";
+  const introLines = doc.splitTextToSize(introText, contentWidth - 10);
+  doc.text(introLines, margin + 5, y);
+  y += introLines.length * 6 + 18;
+
+  // Address if provided
+  if (clienteIndirizzo && clienteIndirizzo.length > 0) {
+    setFont("bold", 12);
+    doc.setTextColor(...lightText);
+    doc.text("Indirizzo installazione:", margin + 5, y);
+    y += 8;
+
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, 18, 3, 3, 'F');
+
+    setFont("normal", 11);
+    doc.setTextColor(60, 60, 60);
+    doc.text(clienteIndirizzo, margin + 12, y + 12);
+    y += 26;
+  }
+
+  // Systems list
+  const colWidth1 = 25;
+  const rowHeight = 22;
+
+  // List each system
+  systems.forEach((sys, idx) => {
+    const systemLabel = sys.accumulo_kwh
+      ? `Impianto fotovoltaico ${sys.potenza_kw} kW con accumulo ${sys.accumulo_kwh} kWh`
+      : `Impianto fotovoltaico ${sys.potenza_kw} kW`;
+
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, rowHeight, 4, 4, 'F');
+
+    setFont("bold", 13);
+    doc.setTextColor(59, 82, 128);
+    doc.text("N°" + (idx + 1), margin + 14, y + 14);
+
+    setFont("normal", 10);
+    doc.setTextColor(60, 60, 60);
+    const sysLines = doc.splitTextToSize(systemLabel, 90);
+    doc.text(sysLines, margin + colWidth1 + 12, y + (sysLines.length > 1 ? 9 : 14));
+
+    setFont("bold", 14);
+    doc.setTextColor(196, 30, 58);
+    doc.text(euro(sys.prezzo_eur), pageWidth - margin - 18, y + 14, { align: "right" });
+
+    y += rowHeight + 6;
+  });
+
+  // Installation row
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, rowHeight, 4, 4, 'F');
+
+  setFont("normal", 11);
+  doc.setTextColor(60, 60, 60);
+  doc.text("Installazione pratica e messa in opera", margin + colWidth1 + 12, y + 14);
+
+  setFont("bold", 14);
+  doc.setTextColor(39, 174, 96);
+  doc.text("INCLUSA", pageWidth - margin - 18, y + 14, { align: "right" });
+
+  y += rowHeight + 15;
+
+  // Totals section
+  if (paymentType === "rate") {
+    // Financing - show total and monthly rate
+    doc.setFillColor(59, 82, 128);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, 16, 3, 3, 'F');
+
+    setFont("bold", 12);
+    doc.setTextColor(...white);
+    doc.text("Importo Totale", margin + 28, y + 11);
+    doc.text("Rata mensile (" + mesiFinanziamento + " mesi)", pageWidth - margin - 65, y + 11);
+
+    y += 20;
+
+    // Calculate simple monthly rate (without TAEG for manual quotes)
+    const rataMensile = totalPrice / mesiFinanziamento;
+
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, 24, 4, 4, 'F');
+
+    setFont("bold", 14);
+    doc.setTextColor(60, 60, 60);
+    doc.text(euro(totalPrice) + " iva esc al 10%", margin + 18, y + 16);
+
+    setFont("bold", 18);
+    doc.setTextColor(196, 30, 58);
+    doc.text(euroMonthly(rataMensile), pageWidth - margin - 18, y + 16, { align: "right" });
+
+    y += 35;
+
+  } else {
+    // Direct payment - show only total
+    doc.setFillColor(59, 82, 128);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, 16, 3, 3, 'F');
+
+    setFont("bold", 12);
+    doc.setTextColor(...white);
+    doc.text("PAGAMENTO DIRETTO", margin + 28, y + 11);
+
+    y += 20;
+
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, 28, 4, 4, 'F');
+
+    setFont("bold", 11);
+    doc.setTextColor(60, 60, 60);
+    doc.text("Importo Totale:", margin + 18, y + 12);
+
+    setFont("bold", 20);
+    doc.setTextColor(196, 30, 58);
+    doc.text(euro(totalPrice) + " iva esc al 10%", margin + 18, y + 24);
+
+    y += 40;
+  }
+
+  // Notes section - only show if there's content
+  if (clienteNote && clienteNote.length > 0) {
+    setFont("bold", 14);
+    doc.setTextColor(...white);
+    doc.text("Note:", margin + 5, y);
+    y += 10;
+
+    const noteLines = doc.splitTextToSize(clienteNote, contentWidth - 30);
+    const noteBoxHeight = Math.max(28, noteLines.length * 7 + 18);
+
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, noteBoxHeight, 4, 4, 'F');
+
+    setFont("normal", 12);
+    doc.setTextColor(60, 60, 60);
+    doc.text(noteLines, margin + 14, y + 14);
+  }
+
+  // Partner section
+  setFont("bold", 12);
+  doc.setTextColor(...white);
+  doc.text("Partner finanziari:", margin + 5, pageHeight - 28);
+
+  setFont("bold", 11);
+  doc.setTextColor(...white);
+  doc.text("Findomestic  |  COMPASS  |  FIDITALIA  |  Banca Sella", pageWidth / 2, pageHeight - 16, { align: "center" });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // PAGE 4: Terms & Contact
+  // ═══════════════════════════════════════════════════════════════════════
+  doc.addPage();
+
+  if (pdfAssets.images.pageBaseClean) {
+    addBackgroundImage(pdfAssets.images.pageBaseClean);
+  }
+
+  y = 45;
+
+  // Notes section
+  setFont("bold", 18);
+  doc.setTextColor(255, 220, 100);
+  doc.text("Note Importanti", margin + 5, y);
+  y += 14;
+
+  const notes = [
+    "I valori indicati sono stime e possono variare in base alle condizioni reali.",
+    "La produzione effettiva dipende dall'orientamento, inclinazione e ombreggiature del tetto.",
+    "La detrazione fiscale del 50% è soggetta alle normative vigenti al momento dell'installazione.",
+    "Il preventivo ha validità di 30 giorni dalla data di emissione.",
+    "I prezzi indicati sono IVA inclusa dove applicabile."
+  ];
+
+  // Calculate total height needed for notes
+  let totalNotesHeight = 15;
+  const noteTextLines = [];
+  notes.forEach(note => {
+    const lines = doc.splitTextToSize("•  " + note, contentWidth - 25);
+    noteTextLines.push(lines);
+    totalNotesHeight += lines.length * 6 + 4;
+  });
+
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, totalNotesHeight, 4, 4, 'F');
+
+  setFont("normal", 11);
+  doc.setTextColor(60, 60, 60);
+  let noteY = y + 12;
+  noteTextLines.forEach(lines => {
+    doc.text(lines, margin + 12, noteY);
+    noteY += lines.length * 6 + 4;
+  });
+
+  y += totalNotesHeight + 12;
+
+  // Contact box
+  setFont("bold", 18);
+  doc.setTextColor(255, 220, 100);
+  doc.text("Contattaci", margin + 5, y);
+  y += 12;
+
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, 55, 5, 5, 'F');
+
+  if (pdfAssets.images.logo) {
+    doc.addImage(pdfAssets.images.logo, 'PNG', margin + 12, y + 8, 45, 16);
+  } else {
+    setFont("bold", 16);
+    doc.setTextColor(196, 30, 58);
+    doc.text("TECH SOLUTIONS", margin + 18, y + 18);
+  }
+
+  setFont("normal", 12);
+  doc.setTextColor(60, 60, 60);
+  doc.text("Tel: 800 123 456 (numero verde)", margin + 18, y + 32);
+  doc.text("Email: info@techsolutions.it", margin + 18, y + 42);
+  doc.text("Web: www.techsolutions.it", margin + 18, y + 52);
+
+  y += 70;
+
+  // Signature area
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, 70, 35, 4, 4, 'F');
+  doc.roundedRect(pageWidth - margin - 75, y, 70, 35, 4, 4, 'F');
+
+  doc.setDrawColor(150, 150, 150);
+  doc.setLineWidth(0.5);
+  doc.line(margin + 15, y + 25, margin + 65, y + 25);
+  doc.line(pageWidth - margin - 65, y + 25, pageWidth - margin - 15, y + 25);
+
+  setFont("normal", 10);
+  doc.setTextColor(80, 80, 80);
+  doc.text("Firma Cliente", margin + 40, y + 32, { align: "center" });
+  doc.text("Firma Tech Solutions", pageWidth - margin - 40, y + 32, { align: "center" });
+
+  y += 50;
+
+  // Footer with date
+  const today = new Date();
+  const dateStr = today.toLocaleDateString("it-IT", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+
+  setFont("italic", 10);
+  doc.setTextColor(...lightText);
+  doc.text("Documento generato il " + dateStr, pageWidth / 2, y, { align: "center" });
+
+  // Save the PDF
+  const fileName = `Preventivo_Manuale_${clienteName.replace(/\s+/g, "_")}_${today.toISOString().split('T')[0]}.pdf`;
+  doc.save(fileName);
+}
+
+// Initialize manual quote after catalog is loaded
+document.addEventListener("DOMContentLoaded", () => {
+  // Wait for catalog to load
+  const checkCatalog = setInterval(() => {
+    if (catalog && catalog.length > 0) {
+      clearInterval(checkCatalog);
+      initManualQuote();
+    }
+  }, 100);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // PDF Generation Module - Professional Template with Custom Assets
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -713,6 +1278,7 @@ const pdfAssets = {
   images: {
     cover: null,
     pageBase: null,
+    pageBaseClean: null,
     logo: null
   },
   loaded: false
@@ -765,14 +1331,16 @@ async function initPdfAssets() {
     pdfAssets.fonts.boldItalic = fontBoldItalic;
 
     // Load images
-    const [imgCover, imgPageBase, imgLogo] = await Promise.all([
+    const [imgCover, imgPageBase, imgPageBaseClean, imgLogo] = await Promise.all([
       loadImageAsDataURL('./Primapaginapreventivo.png'),
       loadImageAsDataURL('./Paginabasevuota.png'),
+      loadImageAsDataURL('./Paginabasecompletamentevuota.png'),
       loadImageAsDataURL('./logotech.png')
     ]);
 
     pdfAssets.images.cover = imgCover;
     pdfAssets.images.pageBase = imgPageBase;
+    pdfAssets.images.pageBaseClean = imgPageBaseClean;
     pdfAssets.images.logo = imgLogo;
 
     pdfAssets.loaded = true;
@@ -838,6 +1406,7 @@ function initPdfModal() {
   generateBtn.addEventListener("click", async () => {
     const clienteName = clienteNameInput.value.trim() || "Cliente";
     const clienteIndirizzo = document.getElementById("clienteIndirizzo").value.trim();
+    const clienteNote = document.getElementById("clienteNote").value.trim(); // Empty if not filled
 
     if (!lastResponse) {
       alert("Effettua prima un calcolo!");
@@ -850,7 +1419,7 @@ function initPdfModal() {
       generateBtn.textContent = "Genera PDF";
     }
 
-    generatePDF(clienteName, clienteIndirizzo, lastResponse);
+    generatePDF(clienteName, clienteIndirizzo, clienteNote, lastResponse);
     closeModal();
   });
 
@@ -866,7 +1435,7 @@ function initPdfModal() {
 }
 
 // ─── PDF Generation ────────────────────────────────────────────────────────
-function generatePDF(clienteName, clienteIndirizzo, data) {
+function generatePDF(clienteName, clienteIndirizzo, clienteNote, data) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({
     orientation: "portrait",
@@ -910,37 +1479,37 @@ function generatePDF(clienteName, clienteIndirizzo, data) {
   }
 
   // Client name on the white line at bottom (positioned on the line in the image)
-  // The white line is at approximately 88% of the page height (around Y=261mm on A4)
+  // The white line is at approximately 93% of the page height (around Y=277mm on A4)
   setFont("normal", 12);
   doc.setTextColor(59, 82, 128); // Dark blue to match the design
-  doc.text("Egregio Sig. " + clienteName, 27, 261);
+  doc.text("Egregio Sig. " + clienteName, 27, 287);
 
   // ═══════════════════════════════════════════════════════════════════════
   // PAGE 2: Company Info & Guarantees
   // ═══════════════════════════════════════════════════════════════════════
   doc.addPage();
 
-  // Add page background
-  if (pdfAssets.images.pageBase) {
-    addBackgroundImage(pdfAssets.images.pageBase);
+  // Add page background (clean version without white bands)
+  if (pdfAssets.images.pageBaseClean) {
+    addBackgroundImage(pdfAssets.images.pageBaseClean);
   }
 
   let y = 45;
 
-  // Company description
-  setFont("normal", 10);
+  // Company description - larger font
+  setFont("normal", 11);
   doc.setTextColor(...white);
   const companyText = "Siamo lieti di presentarvi Tech Solutions, leader nell'energia fotovoltaica, che offre soluzioni innovative ed ecocompatibili per le vostre esigenze energetiche. Con esperienza e passione per l'innovazione, forniamo servizi di alta qualità per la produzione di energia solare, dalla progettazione all'installazione di impianti fotovoltaici, dall'integrazione di sistemi di accumulo alla manutenzione preventiva e correttiva. Lavoriamo con le tecnologie più avanzate per garantire ai nostri clienti soluzioni all'avanguardia.";
 
   const companyLines = doc.splitTextToSize(companyText, contentWidth - 10);
   doc.text(companyLines, margin + 5, y);
-  y += companyLines.length * 5 + 12;
+  y += companyLines.length * 6 + 14;
 
   // Guarantees section
-  setFont("bold", 13);
+  setFont("bold", 16);
   doc.setTextColor(255, 220, 100); // Golden yellow for headers
   doc.text("Garanzie:", margin + 5, y);
-  y += 8;
+  y += 10;
 
   const guarantees = [
     "Garanzie rendimento impianto Fv 30 anni.",
@@ -949,20 +1518,20 @@ function generatePDF(clienteName, clienteIndirizzo, data) {
     "Garanzia inverter e batterie 20 anni"
   ];
 
-  setFont("normal", 9);
+  setFont("normal", 11);
   doc.setTextColor(...white);
   guarantees.forEach(g => {
     doc.text("•  " + g, margin + 8, y);
-    y += 6;
+    y += 7;
   });
 
-  y += 8;
+  y += 10;
 
   // Included items
-  setFont("normal", 9);
+  setFont("bold", 12);
   doc.setTextColor(...lightText);
   doc.text("Sono inclusi inoltre:", margin + 5, y);
-  y += 6;
+  y += 8;
 
   const included = [
     "Quadri di campo e manovra con gruppi scaricatori sovratensione",
@@ -974,28 +1543,29 @@ function generatePDF(clienteName, clienteIndirizzo, data) {
     "Cavi unipolari per collegare i moduli FV agli inverter e ai gruppi di conversione",
     "Cavi di terra unipolari in rame flessibile isolati in PVC",
     "Accessori per i collegamenti elettrici",
-    "Materiale necessario per garantire il regolare funzionamento dell'impianto fotovoltaico in conformità con la normativa"
+    "Materiale necessario per garantire il regolare funzionamento dell'impianto fotovoltaico"
   ];
 
+  setFont("normal", 10);
   doc.setTextColor(...white);
   included.forEach(item => {
-    const lines = doc.splitTextToSize("•  " + item, 95);
+    const lines = doc.splitTextToSize("•  " + item, contentWidth - 20);
     doc.text(lines, margin + 8, y);
-    y += lines.length * 4.5;
+    y += lines.length * 5;
   });
 
-  y += 8;
+  y += 10;
 
   // Optional components (excluded)
-  setFont("bold", 13);
+  setFont("bold", 16);
   doc.setTextColor(255, 220, 100);
   doc.text("Componenti opzionali:", margin + 5, y);
-  y += 6;
+  y += 8;
 
-  setFont("normal", 9);
+  setFont("normal", 10);
   doc.setTextColor(...lightText);
   doc.text("Sono esclusi dalla presente offerta e, se necessari, da quotare separatamente:", margin + 5, y);
-  y += 6;
+  y += 8;
 
   const excluded = [
     "Ponteggi o Mezzi di sollevamento ove necessario",
@@ -1005,10 +1575,11 @@ function generatePDF(clienteName, clienteIndirizzo, data) {
     "Altro non espressamente previsto"
   ];
 
+  setFont("normal", 10);
   doc.setTextColor(...white);
   excluded.forEach(item => {
     doc.text("•  " + item, margin + 8, y);
-    y += 5;
+    y += 6;
   });
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -1016,42 +1587,38 @@ function generatePDF(clienteName, clienteIndirizzo, data) {
   // ═══════════════════════════════════════════════════════════════════════
   doc.addPage();
 
-  // Add page background
-  if (pdfAssets.images.pageBase) {
-    addBackgroundImage(pdfAssets.images.pageBase);
+  // Add page background (clean version without white bands)
+  if (pdfAssets.images.pageBaseClean) {
+    addBackgroundImage(pdfAssets.images.pageBaseClean);
   }
 
   y = 45;
 
   // Section title
-  setFont("bold", 16);
+  setFont("bold", 20);
   doc.setTextColor(255, 220, 100);
-  doc.text("Soluzione proposta: (vedi tabella)", margin + 5, y);
-  y += 10;
+  doc.text("Soluzione proposta", margin + 5, y);
+  y += 14;
 
-  // Intro text
-  setFont("normal", 9);
+  // Intro text - larger font
+  setFont("normal", 11);
   doc.setTextColor(...white);
   const introText = "L'offerta include, senza alcun costo aggiuntivo, l'assistenza tecnica completa per il progetto, compresi i requisiti tecnico-amministrativi necessari per la realizzazione dell'intervento presso il Comune, Enel, ecc. Inoltre, forniamo la supervisione del cantiere e gestiamo la procedura di collegamento dell'impianto alla rete elettrica.";
   const introLines = doc.splitTextToSize(introText, contentWidth - 10);
   doc.text(introLines, margin + 5, y);
-  y += introLines.length * 5 + 15;
+  y += introLines.length * 6 + 18;
 
   // Get system info
   const costoImpianto = numberValue("costo_impianto_eur");
+  const anticipoEur = numberValue("anticipo_eur");
+  const costoFinanziato = Math.max(0, costoImpianto - anticipoEur);
   const anniFinanziamento = numberValue("anni_finanziamento");
   const mesiFinanziamento = anniFinanziamento * 12;
 
-  // Product table - styled like the original
-  const tableStartY = y;
+  // Product table - clean white cards
   const colWidth1 = 25;
   const colWidth2 = 100;
-  const colWidth3 = 45;
-  const rowHeight = 18;
-
-  // Table styling
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(200, 200, 200);
+  const rowHeight = 22;
 
   // Get selected system info
   let systemLabel = "Impianto fotovoltaico";
@@ -1066,283 +1633,342 @@ function generatePDF(clienteName, clienteIndirizzo, data) {
       : `Impianto fotovoltaico ${systemPower}`;
   }
 
-  // Row 1: System
-  doc.setFillColor(255, 255, 255, 0.95);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, rowHeight, 2, 2, 'F');
+  // Row 1: System - clean white background
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, rowHeight, 4, 4, 'F');
 
-  setFont("bold", 11);
-  doc.setTextColor(80, 80, 80);
-  doc.text("N°1", margin + 12, y + 11);
+  setFont("bold", 13);
+  doc.setTextColor(59, 82, 128);
+  doc.text("N°1", margin + 14, y + 14);
 
-  setFont("normal", 9);
+  setFont("normal", 11);
   doc.setTextColor(60, 60, 60);
   const sysLines = doc.splitTextToSize(systemLabel, colWidth2 - 5);
-  doc.text(sysLines, margin + colWidth1 + 10, y + 8);
-
-  setFont("bold", 14);
-  doc.setTextColor(196, 30, 58);
-  doc.text(euro(costoImpianto), pageWidth - margin - 15, y + 11, { align: "right" });
-
-  y += rowHeight + 5;
-
-  // Row 2: Installation
-  doc.setFillColor(255, 255, 255, 0.95);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, rowHeight, 2, 2, 'F');
-
-  setFont("normal", 9);
-  doc.setTextColor(60, 60, 60);
-  doc.text("Installazione pratica e messa in opera", margin + colWidth1 + 10, y + 11);
-
-  setFont("bold", 12);
-  doc.setTextColor(80, 80, 80);
-  doc.text("INCLUSA", pageWidth - margin - 15, y + 11, { align: "right" });
-
-  y += rowHeight + 15;
-
-  // Totals section
-  doc.setFillColor(59, 82, 128);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, 14, 2, 2, 'F');
-
-  setFont("bold", 10);
-  doc.setTextColor(...white);
-  doc.text("Importo Totale", margin + 25, y + 9);
-  doc.text("Importo in " + mesiFinanziamento + " mesi", pageWidth - margin - 60, y + 9);
-
-  y += 18;
-
-  // Values row
-  doc.setFillColor(255, 255, 255, 0.95);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, 20, 2, 2, 'F');
-
-  setFont("bold", 12);
-  doc.setTextColor(60, 60, 60);
-  doc.text(euro(costoImpianto) + " iva esc al 10%", margin + 15, y + 13);
-
-  // Monthly rate calculation
-  const rataMensile = selectedOffer && selectedTermMonths
-    ? Number(selectedOffer.rate_mensili_eur?.[String(selectedTermMonths)])
-    : (data.rata_annua_impianto_eur / 12);
-  const taegPercent = selectedOffer?.taeg_annuo_percent_by_term?.[String(selectedTermMonths)] || "";
+  doc.text(sysLines, margin + colWidth1 + 12, y + 10);
 
   setFont("bold", 16);
   doc.setTextColor(196, 30, 58);
-  doc.text(euroMonthly(rataMensile) + (taegPercent ? " i.e. " + taegPercent + "%" : ""), pageWidth - margin - 15, y + 13, { align: "right" });
+  doc.text(euro(costoImpianto), pageWidth - margin - 18, y + 14, { align: "right" });
 
-  y += 30;
+  y += rowHeight + 8;
 
-  // Notes section
+  // Row 2: Anticipo (if present)
+  if (anticipoEur > 0) {
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, rowHeight, 4, 4, 'F');
+
+    setFont("normal", 11);
+    doc.setTextColor(60, 60, 60);
+    doc.text("Anticipo versato", margin + colWidth1 + 12, y + 14);
+
+    setFont("bold", 14);
+    doc.setTextColor(39, 174, 96);
+    doc.text("- " + euro(anticipoEur), pageWidth - margin - 18, y + 14, { align: "right" });
+
+    y += rowHeight + 8;
+  }
+
+  // Row 3: Installation - clean white background
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, rowHeight, 4, 4, 'F');
+
+  setFont("normal", 11);
+  doc.setTextColor(60, 60, 60);
+  doc.text("Installazione pratica e messa in opera", margin + colWidth1 + 12, y + 14);
+
+  setFont("bold", 14);
+  doc.setTextColor(39, 174, 96);
+  doc.text("INCLUSA", pageWidth - margin - 18, y + 14, { align: "right" });
+
+  y += rowHeight + 15;
+
+  // Totals section - header bar
+  doc.setFillColor(59, 82, 128);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, 16, 3, 3, 'F');
+
   setFont("bold", 12);
   doc.setTextColor(...white);
-  doc.text("Note:", margin + 5, y);
-  y += 8;
+  doc.text(anticipoEur > 0 ? "Importo da Finanziare" : "Importo Totale", margin + 28, y + 11);
+  doc.text("Rata mensile (" + mesiFinanziamento + " mesi)", pageWidth - margin - 65, y + 11);
 
-  doc.setFillColor(255, 255, 255, 0.9);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, 25, 2, 2, 'F');
+  y += 20;
 
-  setFont("normal", 10);
+  // Values row - clean white background
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, 24, 4, 4, 'F');
+
+  setFont("bold", 14);
   doc.setTextColor(60, 60, 60);
-  doc.text("Rata con formula di noleggio operativo", margin + 12, y + 15);
+  doc.text(euro(costoFinanziato) + " iva esc al 10%", margin + 18, y + 16);
+
+  // Monthly rate calculation - use the actual rate from response (already accounts for anticipo)
+  const rataMensile = data.rata_annua_impianto_eur / 12;
+  const taegPercent = selectedOffer?.taeg_annuo_percent_by_term?.[String(selectedTermMonths)] || "";
+
+  setFont("bold", 18);
+  doc.setTextColor(196, 30, 58);
+  doc.text(euroMonthly(rataMensile) + (taegPercent ? " (TAEG " + taegPercent + "%)" : ""), pageWidth - margin - 18, y + 16, { align: "right" });
 
   y += 35;
 
-  // Partner logos section
-  setFont("bold", 10);
-  doc.setTextColor(...white);
-  doc.text("Partner", margin + 5, pageHeight - 25);
+  // Notes section - only show if there's content
+  if (clienteNote && clienteNote.length > 0) {
+    setFont("bold", 14);
+    doc.setTextColor(...white);
+    doc.text("Note:", margin + 5, y);
+    y += 10;
 
-  // Partner names as text (since we don't have logo images)
-  setFont("normal", 8);
-  doc.setTextColor(...lightText);
-  doc.text("Findomestic  |  COMPASS  |  FIDITALIA  |  Banca Sella", margin + 50, pageHeight - 25);
+    // Calculate note box height based on content
+    const noteLines = doc.splitTextToSize(clienteNote, contentWidth - 30);
+    const noteBoxHeight = Math.max(28, noteLines.length * 7 + 18);
+
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, noteBoxHeight, 4, 4, 'F');
+
+    setFont("normal", 12);
+    doc.setTextColor(60, 60, 60);
+    doc.text(noteLines, margin + 14, y + 14);
+  }
+
+  // Partner section - white bold text on blue background (no box)
+  setFont("bold", 12);
+  doc.setTextColor(...white);
+  doc.text("Partner finanziari:", margin + 5, pageHeight - 28);
+
+  setFont("bold", 11);
+  doc.setTextColor(...white);
+  doc.text("Findomestic  |  COMPASS  |  FIDITALIA  |  Banca Sella", pageWidth / 2, pageHeight - 16, { align: "center" });
 
   // ═══════════════════════════════════════════════════════════════════════
   // PAGE 4: Economic Analysis
   // ═══════════════════════════════════════════════════════════════════════
   doc.addPage();
 
-  // Add page background
-  if (pdfAssets.images.pageBase) {
-    addBackgroundImage(pdfAssets.images.pageBase);
+  // Add page background (clean version without white bands)
+  if (pdfAssets.images.pageBaseClean) {
+    addBackgroundImage(pdfAssets.images.pageBaseClean);
   }
 
   y = 45;
 
   // Section title
-  setFont("bold", 16);
+  setFont("bold", 20);
   doc.setTextColor(255, 220, 100);
   doc.text("Analisi Economica", margin + 5, y);
-  y += 15;
+  y += 18;
 
-  // Current situation box
-  doc.setFillColor(255, 255, 255, 0.1);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, 25, 3, 3, 'F');
+  // Current situation box - white background for readability
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, 28, 4, 4, 'F');
 
-  setFont("bold", 11);
-  doc.setTextColor(...white);
-  doc.text("Spesa energetica annua attuale:", margin + 10, y + 10);
+  setFont("bold", 13);
+  doc.setTextColor(59, 82, 128);
+  doc.text("Spesa energetica annua attuale:", margin + 12, y + 12);
 
-  setFont("bold", 16);
-  doc.setTextColor(255, 220, 100);
-  doc.text(euro(data.spesa_annua_attuale_eur), pageWidth - margin - 15, y + 10, { align: "right" });
+  setFont("bold", 18);
+  doc.setTextColor(196, 30, 58);
+  doc.text(euro(data.spesa_annua_attuale_eur), pageWidth - margin - 18, y + 12, { align: "right" });
 
-  setFont("normal", 9);
-  doc.setTextColor(...lightText);
-  doc.text("(prima dell'installazione del fotovoltaico)", margin + 10, y + 19);
+  setFont("normal", 11);
+  doc.setTextColor(100, 100, 100);
+  doc.text("(prima dell'installazione del fotovoltaico)", margin + 12, y + 22);
 
-  y += 35;
+  y += 38;
 
-  // Financial breakdown
-  setFont("bold", 12);
+  // Financial breakdown - clean white cards
+  setFont("bold", 14);
   doc.setTextColor(...white);
   doc.text("Dettaglio costi e benefici annui:", margin + 5, y);
-  y += 10;
+  y += 12;
 
   const financialItems = [
-    { label: "Rata annua finanziamento (" + anniFinanziamento + " anni)", value: euro(data.rata_annua_impianto_eur), color: [255, 180, 180] },
-    { label: "Detrazione fiscale annua (recupero IRPEF)", value: "- " + euro(data.detrazione_annua_eur), color: [180, 255, 180] },
-    { label: "Risparmio in bolletta (autoconsumo)", value: "- " + euro(data.risparmio_bolletta_eur), color: [180, 255, 180] },
-    { label: "Ricavo vendita energia al GSE", value: "- " + euro(data.ricavo_gse_eur), color: [180, 255, 180] }
+    { label: "Rata annua finanziamento (" + anniFinanziamento + " anni)", value: euro(data.rata_annua_impianto_eur), isNegative: true },
+    { label: "Detrazione fiscale annua (recupero IRPEF)", value: "- " + euro(data.detrazione_annua_eur), isNegative: false },
+    { label: "Risparmio in bolletta (autoconsumo)", value: "- " + euro(data.risparmio_bolletta_eur), isNegative: false },
+    { label: "Ricavo vendita energia al GSE", value: "- " + euro(data.ricavo_gse_eur), isNegative: false }
   ];
 
   financialItems.forEach((item, i) => {
-    doc.setFillColor(255, 255, 255, 0.08);
-    doc.roundedRect(margin + 5, y, contentWidth - 10, 12, 2, 2, 'F');
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, 16, 3, 3, 'F');
 
-    setFont("normal", 9);
-    doc.setTextColor(...white);
-    doc.text(item.label, margin + 10, y + 8);
+    setFont("normal", 11);
+    doc.setTextColor(60, 60, 60);
+    doc.text(item.label, margin + 12, y + 11);
 
-    setFont("bold", 10);
-    doc.setTextColor(...item.color);
-    doc.text(item.value, pageWidth - margin - 15, y + 8, { align: "right" });
+    setFont("bold", 12);
+    doc.setTextColor(item.isNegative ? 196 : 39, item.isNegative ? 30 : 174, item.isNegative ? 58 : 96);
+    doc.text(item.value, pageWidth - margin - 18, y + 11, { align: "right" });
 
-    y += 14;
+    y += 19;
   });
 
-  y += 10;
+  y += 12;
 
   // Result box
   const delta = data.delta_vs_spesa_attuale_eur;
   const isPositive = delta <= 0;
 
-  doc.setFillColor(isPositive ? 39 : 180, isPositive ? 174 : 50, isPositive ? 96 : 50);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, 35, 4, 4, 'F');
+  doc.setFillColor(isPositive ? 39 : 196, isPositive ? 174 : 30, isPositive ? 96 : 58);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, 40, 5, 5, 'F');
 
-  setFont("bold", 11);
+  setFont("bold", 13);
   doc.setTextColor(...white);
-  doc.text("COSTO NETTO ANNUO CON FOTOVOLTAICO:", margin + 10, y + 12);
+  doc.text("COSTO NETTO ANNUO CON FOTOVOLTAICO:", margin + 12, y + 14);
 
-  setFont("bold", 18);
-  doc.text(euro(data.costo_netto_annuo_eur), pageWidth - margin - 15, y + 12, { align: "right" });
+  setFont("bold", 22);
+  doc.text(euro(data.costo_netto_annuo_eur), pageWidth - margin - 18, y + 14, { align: "right" });
 
-  setFont("bold", 10);
-  doc.text(isPositive ? "RISPARMIO RISPETTO AD OGGI:" : "DIFFERENZA:", margin + 10, y + 26);
+  setFont("bold", 12);
+  doc.text(isPositive ? "RISPARMIO RISPETTO AD OGGI:" : "DIFFERENZA:", margin + 12, y + 30);
 
-  setFont("bold", 14);
+  setFont("bold", 16);
   const deltaText = isPositive
     ? euro(Math.abs(delta)) + " ALL'ANNO!"
     : euro(delta) + " all'anno";
-  doc.text(deltaText, pageWidth - margin - 15, y + 26, { align: "right" });
+  doc.text(deltaText, pageWidth - margin - 18, y + 30, { align: "right" });
 
-  y += 45;
+  y += 50;
 
-  // After financing box
+  // After financing box - clean white style
   const year11 = data.cashflow_anni.find((x) => x.anno === anniFinanziamento + 1);
   if (year11) {
-    doc.setFillColor(16, 185, 129, 0.3);
-    doc.roundedRect(margin + 5, y, contentWidth - 10, 25, 3, 3, 'F');
-
-    setFont("bold", 10);
-    doc.setTextColor(180, 255, 200);
-    doc.text("DOPO IL FINANZIAMENTO (Anno " + (anniFinanziamento + 1) + " in poi):", margin + 10, y + 10);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, 30, 4, 4, 'F');
 
     setFont("bold", 12);
-    doc.setTextColor(100, 255, 150);
-    doc.text("Risparmio netto: " + euro(Math.abs(year11.costo_netto_eur)) + "/anno", margin + 10, y + 20);
+    doc.setTextColor(59, 82, 128);
+    doc.text("DOPO IL FINANZIAMENTO (Anno " + (anniFinanziamento + 1) + " in poi):", margin + 12, y + 12);
+
+    setFont("bold", 14);
+    doc.setTextColor(39, 174, 96);
+    doc.text("Risparmio netto: " + euro(Math.abs(year11.costo_netto_eur)) + "/anno", margin + 12, y + 24);
   }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // PAGE 5: 25-Year Cashflow
+  // PAGE 5: 25-Year Cashflow Summary (Visual Chart)
   // ═══════════════════════════════════════════════════════════════════════
   doc.addPage();
 
-  // Add page background
-  if (pdfAssets.images.pageBase) {
-    addBackgroundImage(pdfAssets.images.pageBase);
+  // Add page background (clean version without white bands)
+  if (pdfAssets.images.pageBaseClean) {
+    addBackgroundImage(pdfAssets.images.pageBaseClean);
   }
 
   y = 45;
 
   // Section title
-  setFont("bold", 16);
+  setFont("bold", 20);
   doc.setTextColor(255, 220, 100);
   doc.text("Proiezione a 25 Anni", margin + 5, y);
-  y += 12;
+  y += 20;
 
-  // Table header
-  doc.setFillColor(59, 82, 128);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, 10, 2, 2, 'F');
+  // Visual bar chart for key years
+  const keyYears = [1, 5, 10, 15, 20, 25];
+  const chartHeight = 100;
+  const chartStartY = y;
+  const barWidth = 22;
+  const chartLeftMargin = margin + 25;
+  const barSpacing = (contentWidth - 50) / keyYears.length;
 
-  setFont("bold", 9);
-  doc.setTextColor(...white);
-  doc.text("Anno", margin + 15, y + 7);
-  doc.text("Costo/Risparmio Netto", pageWidth - margin - 15, y + 7, { align: "right" });
-  y += 12;
+  // Find max absolute value for scaling
+  const keyYearData = keyYears.map(yr => data.cashflow_anni.find(r => r.anno === yr));
+  const maxAbsValue = Math.max(...keyYearData.map(d => Math.abs(d?.costo_netto_eur || 0)), 100);
 
-  // Table rows - compact
-  const rowH = 7.5;
-  data.cashflow_anni.forEach((row, i) => {
-    const isEven = i % 2 === 0;
-    doc.setFillColor(255, 255, 255, isEven ? 0.1 : 0.05);
-    doc.rect(margin + 5, y, contentWidth - 10, rowH, 'F');
+  // Draw chart background (includes legend area)
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, chartHeight + 70, 5, 5, 'F');
 
-    setFont("normal", 8);
-    doc.setTextColor(...white);
-    doc.text(String(row.anno), margin + 15, y + 5.5);
+  // Draw zero line
+  const zeroLineY = chartStartY + 25 + chartHeight / 2;
+  doc.setDrawColor(150, 150, 150);
+  doc.setLineWidth(0.5);
+  doc.line(chartLeftMargin - 10, zeroLineY, pageWidth - margin - 20, zeroLineY);
 
-    const isNeg = row.costo_netto_eur <= 0;
-    doc.setTextColor(isNeg ? 100 : 255, isNeg ? 255 : 150, isNeg ? 150 : 150);
-    setFont("bold", 8);
-    doc.text(euro(row.costo_netto_eur), pageWidth - margin - 15, y + 5.5, { align: "right" });
+  // Draw bars for key years
+  keyYears.forEach((yr, i) => {
+    const yearData = data.cashflow_anni.find(r => r.anno === yr);
+    if (!yearData) return;
 
-    y += rowH;
+    const value = yearData.costo_netto_eur;
+    const barX = chartLeftMargin + i * barSpacing;
+    const barHeight = Math.abs(value) / maxAbsValue * (chartHeight / 2 - 10);
+    const isNegative = value <= 0; // Negative = savings = green
+
+    // Bar color
+    if (isNegative) {
+      doc.setFillColor(39, 174, 96); // Green for savings
+    } else {
+      doc.setFillColor(196, 30, 58); // Red for costs
+    }
+
+    // Draw bar (above or below zero line)
+    if (isNegative) {
+      doc.roundedRect(barX, zeroLineY - barHeight, barWidth, barHeight, 2, 2, 'F');
+    } else {
+      doc.roundedRect(barX, zeroLineY, barWidth, barHeight, 2, 2, 'F');
+    }
+
+    // Year label
+    setFont("bold", 11);
+    doc.setTextColor(60, 60, 60);
+    doc.text("Anno " + yr, barX + barWidth / 2, chartStartY + chartHeight + 35, { align: "center" });
+
+    // Value label
+    setFont("normal", 9);
+    doc.setTextColor(isNegative ? 39 : 196, isNegative ? 174 : 30, isNegative ? 96 : 58);
+    const valueY = isNegative ? zeroLineY - barHeight - 5 : zeroLineY + barHeight + 10;
+    doc.text(euro(value), barX + barWidth / 2, valueY, { align: "center" });
   });
 
-  y += 8;
+  // Legend - inside the same white box
+  const legendY = chartStartY + chartHeight + 50;
 
-  // 25-year total
+  doc.setFillColor(39, 174, 96);
+  doc.rect(margin + 45, legendY, 12, 8, 'F');
+  setFont("bold", 11);
+  doc.setTextColor(60, 60, 60);
+  doc.text("Risparmio", margin + 62, legendY + 6);
+
+  doc.setFillColor(196, 30, 58);
+  doc.rect(margin + 115, legendY, 12, 8, 'F');
+  doc.text("Costo", margin + 132, legendY + 6);
+
+  y = chartStartY + chartHeight + 80;
+
+  // 25-year total summary box
   const total25 = data.cashflow_anni.reduce((sum, row) => sum + row.costo_netto_eur, 0);
 
-  doc.setFillColor(total25 <= 0 ? 39 : 180, total25 <= 0 ? 174 : 50, total25 <= 0 ? 96 : 50);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, 18, 3, 3, 'F');
-
-  setFont("bold", 11);
-  doc.setTextColor(...white);
-  doc.text("BILANCIO 25 ANNI:", margin + 15, y + 12);
+  doc.setFillColor(total25 <= 0 ? 39 : 196, total25 <= 0 ? 174 : 30, total25 <= 0 ? 96 : 58);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, 35, 5, 5, 'F');
 
   setFont("bold", 14);
+  doc.setTextColor(...white);
+  doc.text("BILANCIO TOTALE 25 ANNI:", margin + 15, y + 15);
+
+  setFont("bold", 20);
   const totalLabel = total25 <= 0
-    ? "RISPARMIO TOTALE: " + euro(Math.abs(total25))
-    : "COSTO TOTALE: " + euro(total25);
-  doc.text(totalLabel, pageWidth - margin - 15, y + 12, { align: "right" });
+    ? "RISPARMIO: " + euro(Math.abs(total25))
+    : "COSTO: " + euro(total25);
+  doc.text(totalLabel, pageWidth - margin - 18, y + 23, { align: "right" });
 
   // ═══════════════════════════════════════════════════════════════════════
   // PAGE 6: Terms & Contact
   // ═══════════════════════════════════════════════════════════════════════
   doc.addPage();
 
-  // Add page background
-  if (pdfAssets.images.pageBase) {
-    addBackgroundImage(pdfAssets.images.pageBase);
+  // Add page background (clean version without white bands)
+  if (pdfAssets.images.pageBaseClean) {
+    addBackgroundImage(pdfAssets.images.pageBaseClean);
   }
 
   y = 45;
 
   // Notes section
-  setFont("bold", 14);
+  setFont("bold", 18);
   doc.setTextColor(255, 220, 100);
   doc.text("Note Importanti", margin + 5, y);
-  y += 10;
+  y += 14;
 
   const notes = [
     "I valori indicati sono stime basate sui dati forniti e possono variare in base alle condizioni reali.",
@@ -1353,54 +1979,71 @@ function generatePDF(clienteName, clienteIndirizzo, data) {
     "I prezzi indicati sono IVA inclusa dove applicabile."
   ];
 
-  setFont("normal", 9);
-  doc.setTextColor(...white);
+  // Calculate total height needed for notes
+  let totalNotesHeight = 15;
+  const noteTextLines = [];
   notes.forEach(note => {
-    const lines = doc.splitTextToSize("•  " + note, contentWidth - 15);
-    doc.text(lines, margin + 8, y);
-    y += lines.length * 5 + 3;
+    const lines = doc.splitTextToSize("•  " + note, contentWidth - 25);
+    noteTextLines.push(lines);
+    totalNotesHeight += lines.length * 6 + 4;
   });
 
-  y += 15;
+  // Notes in white card for readability
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, totalNotesHeight, 4, 4, 'F');
+
+  setFont("normal", 11);
+  doc.setTextColor(60, 60, 60);
+  let noteY = y + 12;
+  noteTextLines.forEach(lines => {
+    doc.text(lines, margin + 12, noteY);
+    noteY += lines.length * 6 + 4;
+  });
+
+  y += totalNotesHeight + 12;
 
   // Contact box
-  setFont("bold", 14);
+  setFont("bold", 18);
   doc.setTextColor(255, 220, 100);
   doc.text("Contattaci", margin + 5, y);
-  y += 10;
+  y += 12;
 
-  doc.setFillColor(255, 255, 255, 0.1);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, 50, 4, 4, 'F');
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, contentWidth - 10, 55, 5, 5, 'F');
 
   // Add logo if available
   if (pdfAssets.images.logo) {
-    doc.addImage(pdfAssets.images.logo, 'PNG', margin + 10, y + 5, 40, 15);
+    doc.addImage(pdfAssets.images.logo, 'PNG', margin + 12, y + 8, 45, 16);
   } else {
-    setFont("bold", 14);
+    setFont("bold", 16);
     doc.setTextColor(196, 30, 58);
-    doc.text("TECH SOLUTIONS", margin + 15, y + 15);
+    doc.text("TECH SOLUTIONS", margin + 18, y + 18);
   }
 
-  setFont("normal", 10);
-  doc.setTextColor(...white);
-  doc.text("Tel: 800 123 456 (numero verde)", margin + 15, y + 28);
-  doc.text("Email: info@techsolutions.it", margin + 15, y + 36);
-  doc.text("Web: www.techsolutions.it", margin + 15, y + 44);
+  setFont("normal", 12);
+  doc.setTextColor(60, 60, 60);
+  doc.text("Tel: 800 123 456 (numero verde)", margin + 18, y + 32);
+  doc.text("Email: info@techsolutions.it", margin + 18, y + 42);
+  doc.text("Web: www.techsolutions.it", margin + 18, y + 52);
 
-  y += 65;
+  y += 70;
 
-  // Signature area
-  doc.setDrawColor(255, 255, 255, 0.5);
+  // Signature area - clean white background
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 5, y, 70, 35, 4, 4, 'F');
+  doc.roundedRect(pageWidth - margin - 75, y, 70, 35, 4, 4, 'F');
+
+  doc.setDrawColor(150, 150, 150);
   doc.setLineWidth(0.5);
-  doc.line(margin + 10, y, margin + 70, y);
-  doc.line(pageWidth - margin - 70, y, pageWidth - margin - 10, y);
+  doc.line(margin + 15, y + 25, margin + 65, y + 25);
+  doc.line(pageWidth - margin - 65, y + 25, pageWidth - margin - 15, y + 25);
 
-  setFont("normal", 9);
-  doc.setTextColor(...lightText);
-  doc.text("Firma Cliente", margin + 28, y + 8);
-  doc.text("Firma Tech Solutions", pageWidth - margin - 55, y + 8);
+  setFont("normal", 10);
+  doc.setTextColor(80, 80, 80);
+  doc.text("Firma Cliente", margin + 40, y + 32, { align: "center" });
+  doc.text("Firma Tech Solutions", pageWidth - margin - 40, y + 32, { align: "center" });
 
-  y += 20;
+  y += 50;
 
   // Footer with date
   const today = new Date();
@@ -1410,7 +2053,7 @@ function generatePDF(clienteName, clienteIndirizzo, data) {
     year: "numeric"
   });
 
-  setFont("italic", 8);
+  setFont("italic", 10);
   doc.setTextColor(...lightText);
   doc.text("Documento generato il " + dateStr, pageWidth / 2, y, { align: "center" });
 
