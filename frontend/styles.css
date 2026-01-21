@@ -1399,3 +1399,478 @@ input[type="number"] {
 .section-content textarea::placeholder {
   color: var(--text-muted);
 }
+
+/* ─── Datasheet Options ──────────────────────────────────────────────────── */
+.datasheet-options {
+  margin-top: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.datasheet-options .field-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-red);
+  cursor: pointer;
+}
+
+.checkbox-option .checkbox-label {
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.checkbox-option:hover .checkbox-label {
+  color: var(--accent-primary);
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-top: var(--space-xs);
+  line-height: 1.4;
+}
+
+.savings-option {
+  background: var(--surface-secondary);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.datasheet-preview {
+  margin-top: var(--space-sm);
+}
+
+.datasheet-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.datasheet-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.datasheet-tag::before {
+  content: "📄 ";
+  margin-right: 4px;
+}
+
+.datasheet-none {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ─── Datasheet Dropzone ─────────────────────────────────────────────────── */
+.datasheet-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  background: var(--bg-base);
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-align: center;
+  min-height: 100px;
+}
+
+.datasheet-dropzone:hover {
+  border-color: var(--accent-primary);
+  background: var(--accent-subtle);
+}
+
+.datasheet-dropzone.dragover {
+  border-color: var(--positive);
+  background: var(--positive-subtle);
+  transform: scale(1.02);
+}
+
+.datasheet-dropzone.uploading {
+  border-color: var(--accent-primary);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.dropzone-icon {
+  font-size: 2rem;
+  margin-bottom: var(--space-sm);
+}
+
+.dropzone-text {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dropzone-subtext {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-top: var(--space-xs);
+}
+
+/* ─── Datasheet Library ──────────────────────────────────────────────────── */
+.datasheet-library {
+  margin-top: var(--space-md);
+}
+
+.datasheet-category {
+  margin-bottom: var(--space-md);
+}
+
+.datasheet-category-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: var(--space-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.datasheet-category-header .category-icon {
+  font-size: 1rem;
+}
+
+.datasheet-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-sm);
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-xs);
+  font-size: 0.85rem;
+  transition: background var(--transition-fast);
+}
+
+.datasheet-item:hover {
+  background: var(--bg-hover);
+}
+
+.datasheet-item-name {
+  flex: 1;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: var(--space-sm);
+}
+
+.datasheet-item-size {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-right: var(--space-sm);
+}
+
+.datasheet-item-delete {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 1rem;
+}
+
+.datasheet-item-delete:hover {
+  background: var(--negative-glow);
+  color: var(--negative);
+}
+
+.datasheet-empty {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: var(--space-md);
+}
+
+/* ─── Datasheet Selector (for quote modal) ───────────────────────────────── */
+.datasheet-selector {
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs);
+}
+
+.selector-category {
+  margin-bottom: var(--space-sm);
+}
+
+.selector-category:last-child {
+  margin-bottom: 0;
+}
+
+.selector-category-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: var(--space-xs) var(--space-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.selector-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.selector-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.selector-item:hover {
+  background: var(--bg-hover);
+}
+
+.selector-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand-red);
+  cursor: pointer;
+}
+
+.selector-item-label {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selector-empty {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: var(--space-md);
+}
+
+/* ─── Catalog Management ─────────────────────────────────────────────────── */
+.section-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-md) 0;
+  line-height: 1.5;
+}
+
+.catalog-actions {
+  margin-bottom: var(--space-md);
+}
+
+.btn-catalog-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.btn-catalog-action:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.btn-catalog-action .btn-icon {
+  font-size: 1.1rem;
+}
+
+.catalog-upload-section {
+  margin-top: var(--space-md);
+}
+
+.catalog-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: var(--bg-base);
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-align: center;
+  min-height: 80px;
+}
+
+.catalog-dropzone:hover {
+  border-color: var(--accent-primary);
+  background: var(--accent-subtle);
+}
+
+.catalog-dropzone.dragover {
+  border-color: var(--positive);
+  background: var(--positive-subtle);
+  transform: scale(1.02);
+}
+
+.catalog-status {
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  text-align: center;
+  transition: all var(--transition-base);
+}
+
+.catalog-status:empty {
+  display: none;
+}
+
+.catalog-status.status-info {
+  background: var(--accent-subtle);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+}
+
+.catalog-status.status-success {
+  background: var(--positive-subtle);
+  color: var(--positive);
+  border: 1px solid var(--positive);
+}
+
+.catalog-status.status-error {
+  background: var(--negative-glow);
+  color: var(--negative);
+  border: 1px solid var(--negative);
+}
+
+/* ─── Button Open Manual Modal ───────────────────────────────────────────── */
+.btn-open-manual-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  margin: var(--space-sm) 0;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-open-manual-modal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.btn-open-manual-modal:active {
+  transform: translateY(0);
+}
+
+.btn-open-manual-modal .btn-icon {
+  font-size: 1.1rem;
+}
+
+/* ─── Modal Large (for Manual Quote) ─────────────────────────────────────── */
+.modal-large {
+  max-width: 900px;
+  width: 95%;
+}
+
+.modal-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
+}
+
+.modal-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.modal-column .multi-select-container {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.modal-column .datasheet-selector {
+  max-height: 150px;
+}
+
+/* Responsive: stack columns on smaller screens */
+@media (max-width: 768px) {
+  .modal-two-columns {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+  }
+
+  .modal-large {
+    max-width: 95%;
+  }
+
+  .modal-column .multi-select-container {
+    max-height: 200px;
+  }
+}

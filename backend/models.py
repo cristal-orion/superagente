@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 class CalcRequest(BaseModel):
     consumo_annuo_kwh: float = Field(..., gt=0)
     prezzo_energia_eur_kwh: float = Field(0.30, gt=0)
-    quota_fissa_annua_eur: float = Field(0.0, ge=0)
 
     costo_impianto_eur: float = Field(..., gt=0)
     costo_finanziato_eur: float | None = Field(

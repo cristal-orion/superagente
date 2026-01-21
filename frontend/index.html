@@ -3,7 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f59e0b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PV Calc" />
     <title>PV Sales Calculator</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./logotech.png" />
+    <link rel="icon" type="image/png" href="./logotech.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -65,13 +72,6 @@
                     </div>
                   </div>
                 </div>
-                <div class="field">
-                  <label for="quota_fissa_annua_eur">Quota fissa annua</label>
-                  <div class="input-with-unit">
-                    <input id="quota_fissa_annua_eur" type="number" step="1" min="0" value="0" />
-                    <span class="unit">€</span>
-                  </div>
-                </div>
               </div>
             </details>
 
@@ -126,60 +126,67 @@
               </div>
             </details>
 
-            <!-- Section: Preventivo Manuale -->
-            <details class="input-section section-manual-quote">
+            <!-- Button: Genera Preventivo -->
+            <button type="button" class="btn-open-manual-modal" id="openManualModal">
+              <span class="btn-icon">📄</span>
+              <span>Genera Preventivo</span>
+            </button>
+
+            <!-- Section: Gestione Schede Tecniche -->
+            <details class="input-section">
               <summary class="section-header">
-                <span class="section-icon">📋</span>
-                <span class="section-title">Preventivo Manuale</span>
+                <span class="section-icon">📁</span>
+                <span class="section-title">Gestione Schede Tecniche</span>
                 <span class="section-chevron">›</span>
               </summary>
               <div class="section-content">
                 <div class="field">
-                  <label>Seleziona impianti (anche multipli)</label>
-                  <div class="multi-select-container" id="manualSystemsContainer">
-                    <!-- Will be populated by JS -->
+                  <label>Categoria per upload</label>
+                  <select id="uploadCategory">
+                    <option value="pannelli">Pannelli</option>
+                    <option value="inverter">Inverter</option>
+                    <option value="batterie">Batterie</option>
+                    <option value="pompe">Pompe di Calore</option>
+                    <option value="altro">Altro</option>
+                  </select>
+                </div>
+                <div class="datasheet-dropzone" id="datasheetDropzone">
+                  <input type="file" id="datasheetFileInput" accept=".pdf" multiple hidden />
+                  <span class="dropzone-icon">📄</span>
+                  <span class="dropzone-text">Trascina qui i PDF</span>
+                  <span class="dropzone-subtext">oppure clicca per selezionare</span>
+                </div>
+                <div class="datasheet-library" id="datasheetLibrary">
+                  <!-- Populated dynamically -->
+                </div>
+              </div>
+            </details>
+
+            <!-- Section: Gestione Listino -->
+            <details class="input-section">
+              <summary class="section-header">
+                <span class="section-icon">📋</span>
+                <span class="section-title">Gestione Listino</span>
+                <span class="section-chevron">›</span>
+              </summary>
+              <div class="section-content">
+                <p class="section-description">Scarica il listino corrente in Excel, modificalo e ricaricalo per aggiornare i prezzi.</p>
+                <div class="catalog-actions">
+                  <button type="button" class="btn-catalog-action" id="downloadCatalogBtn">
+                    <span class="btn-icon">📥</span>
+                    <span>Scarica Listino Excel</span>
+                  </button>
+                </div>
+                <div class="catalog-upload-section">
+                  <label class="field-label">Carica listino aggiornato</label>
+                  <div class="catalog-dropzone" id="catalogDropzone">
+                    <input type="file" id="catalogFileInput" accept=".xlsx" hidden />
+                    <span class="dropzone-icon">📊</span>
+                    <span class="dropzone-text">Trascina qui il file Excel</span>
+                    <span class="dropzone-subtext">oppure clicca per selezionare</span>
                   </div>
-                  <div class="selected-systems-summary" id="selectedSystemsSummary">
-                    <span class="summary-count">0 impianti selezionati</span>
-                    <span class="summary-total">Totale: € 0</span>
-                  </div>
                 </div>
-                <div class="field">
-                  <label>Tipo di pagamento</label>
-                  <div class="payment-type-selector">
-                    <label class="radio-option">
-                      <input type="radio" name="paymentType" value="rate" checked />
-                      <span class="radio-label">Finanziamento a rate</span>
-                    </label>
-                    <label class="radio-option">
-                      <input type="radio" name="paymentType" value="diretto" />
-                      <span class="radio-label">Pagamento diretto</span>
-                    </label>
-                  </div>
-                </div>
-                <div class="field" id="manualRateOptions">
-                  <label for="manualAnniFinanziamento">Durata finanziamento</label>
-                  <div class="input-with-unit">
-                    <input id="manualAnniFinanziamento" type="number" step="1" min="1" max="20" value="10" />
-                    <span class="unit">anni</span>
-                  </div>
-                </div>
-                <div class="field">
-                  <label for="manualClienteName">Nome Cliente</label>
-                  <input type="text" id="manualClienteName" placeholder="Es. Sig. Rossi" />
-                </div>
-                <div class="field">
-                  <label for="manualClienteIndirizzo">Indirizzo (opzionale)</label>
-                  <input type="text" id="manualClienteIndirizzo" placeholder="Es. Via Roma 123, Milano" />
-                </div>
-                <div class="field">
-                  <label for="manualClienteNote">Note (opzionale)</label>
-                  <textarea id="manualClienteNote" rows="2" placeholder="Note aggiuntive per il preventivo"></textarea>
-                </div>
-                <button class="btn-manual-quote" id="generateManualQuote">
-                  <span class="btn-icon">📄</span>
-                  <span>Genera Preventivo Manuale</span>
-                </button>
+                <div class="catalog-status" id="catalogStatus"></div>
               </div>
             </details>
 
@@ -269,10 +276,6 @@
                 <span class="comparison-value" id="costo_netto">—</span>
               </div>
             </div>
-            <button class="btn-preventivo" id="openPdfModal">
-              <span class="btn-preventivo-icon">📄</span>
-              <span class="btn-preventivo-text">Genera Preventivo PDF</span>
-            </button>
           </div>
 
           <!-- Stats Cards -->
@@ -362,34 +365,132 @@
 
     <!-- jsPDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="./app.js?v=9"></script>
+    <!-- pdf-lib for PDF merging -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="./app.js?v=20"></script>
 
-    <!-- Modal Preventivo -->
-    <div class="modal-overlay" id="pdfModal">
-      <div class="modal-content">
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => {
+              console.log('Service Worker registered:', reg.scope);
+              // Check for updates
+              reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New version available
+                    console.log('New version available! Refresh to update.');
+                  }
+                });
+              });
+            })
+            .catch((err) => console.error('SW registration failed:', err));
+        });
+      }
+    </script>
+
+    <!-- Modal Genera Preventivo -->
+    <div class="modal-overlay" id="manualQuoteModal">
+      <div class="modal-content modal-large">
         <div class="modal-header">
           <h2>Genera Preventivo</h2>
-          <button class="modal-close" id="modalClose">&times;</button>
+          <button class="modal-close" id="manualModalClose">&times;</button>
         </div>
         <div class="modal-body">
-          <div class="field">
-            <label for="clienteName">Nome Cliente</label>
-            <input type="text" id="clienteName" placeholder="Es. Sig. Rossi" autocomplete="off" />
-          </div>
-          <div class="field">
-            <label for="clienteIndirizzo">Indirizzo (opzionale)</label>
-            <input type="text" id="clienteIndirizzo" placeholder="Es. Via Roma 123, Milano" autocomplete="off" />
-          </div>
-          <div class="field">
-            <label for="clienteNote">Note per il preventivo</label>
-            <textarea id="clienteNote" rows="3" placeholder="Es. Rata con formula di noleggio operativo" autocomplete="off"></textarea>
+          <div class="modal-two-columns">
+            <!-- Left Column: System Selection -->
+            <div class="modal-column">
+              <div class="field">
+                <label>Seleziona impianti (anche multipli)</label>
+                <div class="multi-select-container" id="manualSystemsContainer">
+                  <!-- Will be populated by JS -->
+                </div>
+              </div>
+              <div class="selected-systems-summary" id="selectedSystemsSummary">
+                <span class="summary-count">0 impianti selezionati</span>
+                <span class="summary-total">Totale: € 0</span>
+              </div>
+              <div class="field">
+                <label for="manualTotalPrice">Prezzo totale (modificabile)</label>
+                <div class="input-with-unit">
+                  <input id="manualTotalPrice" type="number" step="100" min="0" value="0" />
+                  <span class="unit">€</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="manualIvaType">IVA nel preventivo</label>
+                <select id="manualIvaType">
+                  <option value="inclusa">IVA inclusa (10%)</option>
+                  <option value="esclusa">IVA esclusa</option>
+                </select>
+              </div>
+            </div>
+            <!-- Right Column: Client Info & Options -->
+            <div class="modal-column">
+              <div class="field">
+                <label>Tipo di pagamento</label>
+                <div class="payment-type-selector">
+                  <label class="radio-option">
+                    <input type="radio" name="paymentType" value="rate" checked />
+                    <span class="radio-label">Finanziamento a rate</span>
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="paymentType" value="diretto" />
+                    <span class="radio-label">Pagamento diretto</span>
+                  </label>
+                </div>
+              </div>
+              <div class="field" id="manualRateOptions">
+                <label for="manualAnniFinanziamento">Durata finanziamento</label>
+                <div class="input-with-unit">
+                  <input id="manualAnniFinanziamento" type="number" step="1" min="1" max="20" value="10" />
+                  <span class="unit">anni</span>
+                </div>
+              </div>
+              <div class="field" id="manualTaegOptions">
+                <label for="manualTaegPercent">TAEG annuo</label>
+                <div class="input-with-unit">
+                  <input id="manualTaegPercent" type="number" step="0.1" min="0" max="30" value="0" />
+                  <span class="unit">%</span>
+                </div>
+              </div>
+              <div class="field savings-option">
+                <label class="checkbox-option">
+                  <input type="checkbox" id="includeSavingsCalc" />
+                  <span class="checkbox-label">Includi calcolo risparmio annuale</span>
+                </label>
+                <span class="field-hint">Aggiunge al preventivo le pagine con il calcolo del risparmio basato sulla bolletta attuale</span>
+              </div>
+              <div class="field">
+                <label for="manualClienteName">Nome Cliente</label>
+                <input type="text" id="manualClienteName" placeholder="Es. Sig. Rossi" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="manualClienteIndirizzo">Indirizzo (opzionale)</label>
+                <input type="text" id="manualClienteIndirizzo" placeholder="Es. Via Roma 123, Milano" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="manualClienteNote">Note (opzionale)</label>
+                <textarea id="manualClienteNote" rows="2" placeholder="Note aggiuntive per il preventivo" autocomplete="off"></textarea>
+              </div>
+              <div class="field datasheet-options">
+                <label class="field-label">Schede Tecniche da Allegare</label>
+                <div class="datasheet-selector" id="manualDatasheetSelector">
+                  <!-- Populated dynamically by JS -->
+                  <span class="datasheet-none">Caricamento schede...</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" id="modalCancel">Annulla</button>
-          <button class="btn btn-primary" id="generatePdf">
+          <button class="btn btn-secondary" id="manualModalCancel">Annulla</button>
+          <button class="btn btn-primary" id="generateManualQuote">
             <span class="btn-icon">📄</span>
-            Genera PDF
+            Genera Preventivo
           </button>
         </div>
       </div>

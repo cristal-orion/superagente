@@ -1,6 +1,133 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// SolarCalc - Premium Solar Calculator
+// SolarCalc - Premium Solar Calculator (PWA Edition)
 // ═══════════════════════════════════════════════════════════════════════════
+
+// ─── Local Calculator (Offline-capable) ────────────────────────────────────
+const Calculator = {
+  // Spesa annua attuale = consumo × prezzo
+  calcSpesaAnnuaAttuale(consumo, prezzo) {
+    return consumo * prezzo;
+  },
+
+  // Rata annua semplice (senza interessi)
+  calcRataAnnuaSemplice(costo, anni) {
+    return costo / anni;
+  },
+
+  // Rata annua con TAEG (ammortamento francese)
+  calcRataAnnuaConTaeg(costo, anni, taegPercent) {
+    if (taegPercent <= 0) {
+      return this.calcRataAnnuaSemplice(costo, anni);
+    }
+
+    const rMensile = (taegPercent / 100.0) / 12.0;
+    const nMesi = anni * 12;
+
+    if (rMensile === 0) {
+      return this.calcRataAnnuaSemplice(costo, anni);
+    }
+
+    const rataMensile = costo * rMensile / (1.0 - Math.pow(1.0 + rMensile, -nMesi));
+    return rataMensile * 12.0;
+  },
+
+  // Detrazione fiscale annua
+  calcDetrazioneAnnua(costo, aliquotaPercent, anniDetrazione) {
+    return (costo * (aliquotaPercent / 100.0)) / anniDetrazione;
+  },
+
+  // Autoconsumo: quanta energia si usa vs immette in rete
+  calcAutoconsumo(produzione, autoconsumoPercent) {
+    let kwhAutoconsumati = produzione * (autoconsumoPercent / 100.0);
+    kwhAutoconsumati = Math.min(Math.max(kwhAutoconsumati, 0.0), produzione);
+    const kwhImmessi = Math.max(produzione - kwhAutoconsumati, 0.0);
+    return { kwhAutoconsumati, kwhImmessi };
+  },
+
+  // Ricavo GSE (scambio sul posto)
+  calcGse(kwhImmessi, prezzoGse) {
+    return kwhImmessi * prezzoGse;
+  },
+
+  // Calcolo completo - restituisce la response
+  calcResponse(request) {
+    const spesaAttuale = this.calcSpesaAnnuaAttuale(
+      request.consumo_annuo_kwh,
+      request.prezzo_energia_eur_kwh
+    );
+
+    let capitaleFinanziato = request.costo_finanziato_eur !== null && request.costo_finanziato_eur !== undefined
+      ? request.costo_finanziato_eur
+      : request.costo_impianto_eur;
+    capitaleFinanziato = Math.max(capitaleFinanziato, 0.0);
+
+    let rataAnnua;
+    if (capitaleFinanziato === 0) {
+      rataAnnua = 0.0;
+    } else if (request.rata_mensile_override_eur !== null && request.rata_mensile_override_eur > 0) {
+      rataAnnua = request.rata_mensile_override_eur * 12.0;
+    } else if (request.usa_rata_semplice) {
+      rataAnnua = this.calcRataAnnuaSemplice(capitaleFinanziato, request.anni_finanziamento);
+    } else {
+      rataAnnua = this.calcRataAnnuaConTaeg(
+        capitaleFinanziato,
+        request.anni_finanziamento,
+        request.taeg_annuo_percent
+      );
+    }
+
+    const detrazioneAnnua = this.calcDetrazioneAnnua(
+      request.costo_impianto_eur,
+      request.aliquota_detrazione_percent,
+      request.anni_detrazione
+    );
+
+    const { kwhAutoconsumati, kwhImmessi } = this.calcAutoconsumo(
+      request.produzione_annua_kwh,
+      request.autoconsumo_percent
+    );
+
+    let risparmio = kwhAutoconsumati * request.prezzo_energia_eur_kwh;
+    let ricavoGse = this.calcGse(kwhImmessi, request.prezzo_gse_eur_kwh);
+
+    // Applica fattore di prudenza
+    risparmio *= request.fattore_prudenza;
+    ricavoGse *= request.fattore_prudenza;
+
+    const costoNetto = rataAnnua - detrazioneAnnua - risparmio - ricavoGse;
+    const delta = costoNetto - spesaAttuale;
+
+    let messaggio;
+    if (delta <= 0) {
+      messaggio = "Paghi uguale o meno già da subito (stimato).";
+    } else {
+      messaggio = `Paghi circa ${Math.round(delta)}€ in più all'anno (stimato).`;
+    }
+
+    // Genera cashflow 25 anni
+    const cashflowAnni = [];
+    for (let anno = 1; anno <= 25; anno++) {
+      const rata = anno <= request.anni_finanziamento ? rataAnnua : 0.0;
+      const detrazione = anno <= request.anni_detrazione ? detrazioneAnnua : 0.0;
+      const costo = rata - detrazione - risparmio - ricavoGse;
+      cashflowAnni.push({ anno, costo_netto_eur: costo });
+    }
+
+    return {
+      spesa_annua_attuale_eur: spesaAttuale,
+      rata_annua_impianto_eur: rataAnnua,
+      detrazione_annua_eur: detrazioneAnnua,
+      kwh_autoconsumati: kwhAutoconsumati,
+      kwh_immessi: kwhImmessi,
+      risparmio_bolletta_eur: risparmio,
+      ricavo_gse_eur: ricavoGse,
+      costo_netto_annuo_eur: costoNetto,
+      delta_vs_spesa_attuale_eur: delta,
+      messaggio,
+      cashflow_anni: cashflowAnni
+    };
+  }
+};
 
 // ─── Theme Management ──────────────────────────────────────────────────────
 function initTheme() {
@@ -104,6 +231,470 @@ let selectedOffer = null;
 let selectedTermMonths = null;
 let lastResponse = null;
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Datasheet Module - Backend-based PDF Management with Drag & Drop
+// ═══════════════════════════════════════════════════════════════════════════
+
+const DATASHEETS_API_URL = "http://localhost:8000";
+
+const datasheetConfig = {
+  library: {},  // { category: [{ name, filename, url, size }] }
+  loaded: false,
+  categoryLabels: {
+    pannelli: { label: "Pannelli", icon: "☀️" },
+    inverter: { label: "Inverter", icon: "⚡" },
+    batterie: { label: "Batterie", icon: "🔋" },
+    pompe: { label: "Pompe di Calore", icon: "🌡️" },
+    altro: { label: "Altro", icon: "📁" }
+  }
+};
+
+// ─── Fetch Datasheets from Backend (with offline support) ───────────────────
+async function fetchDatasheetsFromBackend() {
+  try {
+    const res = await fetch(`${DATASHEETS_API_URL}/datasheets`);
+    if (!res.ok) throw new Error("Failed to fetch datasheets");
+    datasheetConfig.library = await res.json();
+    datasheetConfig.loaded = true;
+    // Save to localStorage for offline use
+    try {
+      localStorage.setItem('datasheets_library', JSON.stringify(datasheetConfig.library));
+      console.log("Datasheets loaded from backend and cached locally!");
+    } catch (e) {
+      console.warn("Could not cache datasheets to localStorage:", e);
+    }
+    return datasheetConfig.library;
+  } catch (error) {
+    console.warn("Network error loading datasheets, trying local cache...");
+    // Try to load from localStorage (offline mode)
+    try {
+      const cached = localStorage.getItem('datasheets_library');
+      if (cached) {
+        datasheetConfig.library = JSON.parse(cached);
+        datasheetConfig.loaded = true;
+        console.log("Datasheets loaded from local cache (offline mode)");
+        return datasheetConfig.library;
+      }
+    } catch (e) {
+      console.error("Failed to load cached datasheets:", e);
+    }
+    datasheetConfig.loaded = false;
+    return {};
+  }
+}
+
+// ─── Upload Datasheet to Backend ────────────────────────────────────────────
+async function uploadDatasheet(file, category) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("category", category);
+
+  const response = await fetch(`${DATASHEETS_API_URL}/datasheets/upload`, {
+    method: "POST",
+    body: formData
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Upload failed");
+  }
+
+  return await response.json();
+}
+
+// ─── Delete Datasheet from Backend ──────────────────────────────────────────
+async function deleteDatasheet(category, filename) {
+  const response = await fetch(`${DATASHEETS_API_URL}/datasheets/${category}/${encodeURIComponent(filename)}`, {
+    method: "DELETE"
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Delete failed");
+  }
+
+  return await response.json();
+}
+
+// ─── Format File Size ───────────────────────────────────────────────────────
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+// ─── Render Datasheet Library ───────────────────────────────────────────────
+function renderDatasheetLibrary() {
+  const container = document.getElementById("datasheetLibrary");
+  if (!container) return;
+
+  const library = datasheetConfig.library;
+  const categories = Object.keys(datasheetConfig.categoryLabels);
+  let hasAny = false;
+
+  let html = "";
+  for (const cat of categories) {
+    const items = library[cat] || [];
+    if (items.length === 0) continue;
+    hasAny = true;
+
+    const catInfo = datasheetConfig.categoryLabels[cat];
+    html += `<div class="datasheet-category">
+      <div class="datasheet-category-header">
+        <span class="category-icon">${catInfo.icon}</span>
+        <span>${catInfo.label}</span>
+      </div>`;
+
+    for (const item of items) {
+      html += `<div class="datasheet-item" data-category="${cat}" data-filename="${item.filename}">
+        <span class="datasheet-item-name">${item.name}</span>
+        <span class="datasheet-item-size">${formatFileSize(item.size)}</span>
+        <button class="datasheet-item-delete" title="Elimina">🗑️</button>
+      </div>`;
+    }
+
+    html += `</div>`;
+  }
+
+  if (!hasAny) {
+    html = `<div class="datasheet-empty">Nessuna scheda caricata</div>`;
+  }
+
+  container.innerHTML = html;
+
+  // Add delete handlers
+  container.querySelectorAll(".datasheet-item-delete").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const item = btn.closest(".datasheet-item");
+      const category = item.dataset.category;
+      const filename = item.dataset.filename;
+
+      if (confirm(`Eliminare "${filename}"?`)) {
+        try {
+          await deleteDatasheet(category, filename);
+          await fetchDatasheetsFromBackend();
+          renderDatasheetLibrary();
+          renderDatasheetSelector("datasheetSelector");
+          renderDatasheetSelector("manualDatasheetSelector");
+        } catch (error) {
+          alert("Errore eliminazione: " + error.message);
+        }
+      }
+    });
+  });
+}
+
+// ─── Render Datasheet Selector (for quote modals) ───────────────────────────
+function renderDatasheetSelector(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const library = datasheetConfig.library;
+  const categories = Object.keys(datasheetConfig.categoryLabels);
+  let hasAny = false;
+
+  let html = "";
+  for (const cat of categories) {
+    const items = library[cat] || [];
+    if (items.length === 0) continue;
+    hasAny = true;
+
+    const catInfo = datasheetConfig.categoryLabels[cat];
+    html += `<div class="selector-category">
+      <div class="selector-category-label">
+        <span>${catInfo.icon}</span>
+        <span>${catInfo.label}</span>
+      </div>
+      <div class="selector-items">`;
+
+    for (const item of items) {
+      html += `<label class="selector-item">
+        <input type="checkbox" value="${item.url}" data-name="${item.name}" />
+        <span class="selector-item-label">${item.name}</span>
+      </label>`;
+    }
+
+    html += `</div></div>`;
+  }
+
+  if (!hasAny) {
+    html = `<div class="selector-empty">Nessuna scheda disponibile. Carica schede nella sezione "Gestione Schede Tecniche".</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// ─── Get Selected Datasheets from Selector ──────────────────────────────────
+function getSelectedDatasheetsFromSelector(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return [];
+
+  const selected = [];
+  container.querySelectorAll("input[type='checkbox']:checked").forEach(cb => {
+    selected.push({
+      url: cb.value,
+      name: cb.dataset.name
+    });
+  });
+
+  return selected;
+}
+
+// ─── Fetch PDF from URL ─────────────────────────────────────────────────────
+async function fetchPdfFromUrl(url) {
+  const fullUrl = DATASHEETS_API_URL + url;
+  const response = await fetch(fullUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to load PDF: ${url}`);
+  }
+  return await response.arrayBuffer();
+}
+
+// ─── Merge Quote PDF with Selected Datasheets ───────────────────────────────
+async function mergeQuoteWithDatasheets(quotePdfBytes, datasheets) {
+  const { PDFDocument } = PDFLib;
+
+  // Create new merged PDF
+  const mergedPdf = await PDFDocument.create();
+
+  // 1. Add the quote PDF pages first
+  const quotePdf = await PDFDocument.load(quotePdfBytes);
+  const quotePages = await mergedPdf.copyPages(quotePdf, quotePdf.getPageIndices());
+  quotePages.forEach(page => mergedPdf.addPage(page));
+
+  // 2. Add each selected datasheet
+  for (const datasheet of datasheets) {
+    try {
+      console.log(`Loading datasheet: ${datasheet.name}`);
+      const pdfBytes = await fetchPdfFromUrl(datasheet.url);
+      const datasheetPdf = await PDFDocument.load(pdfBytes);
+      const pages = await mergedPdf.copyPages(datasheetPdf, datasheetPdf.getPageIndices());
+      pages.forEach(page => mergedPdf.addPage(page));
+      console.log(`Added ${pages.length} pages from ${datasheet.name}`);
+    } catch (error) {
+      console.warn(`Could not load datasheet: ${datasheet.url}`, error);
+    }
+  }
+
+  // 3. Return merged PDF bytes
+  return await mergedPdf.save();
+}
+
+// ─── Download PDF Blob ──────────────────────────────────────────────────────
+function downloadPdfBlob(pdfBytes, fileName) {
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── Initialize Datasheet Dropzone ──────────────────────────────────────────
+function initDatasheetDropzone() {
+  const dropzone = document.getElementById("datasheetDropzone");
+  const fileInput = document.getElementById("datasheetFileInput");
+  const categorySelect = document.getElementById("uploadCategory");
+
+  if (!dropzone || !fileInput) return;
+
+  // Click to open file dialog
+  dropzone.addEventListener("click", () => fileInput.click());
+
+  // File input change
+  fileInput.addEventListener("change", async () => {
+    if (fileInput.files.length > 0) {
+      await handleFileUpload(fileInput.files, categorySelect.value);
+      fileInput.value = "";
+    }
+  });
+
+  // Drag & drop events
+  dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.classList.add("dragover");
+  });
+
+  dropzone.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+  });
+
+  dropzone.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+
+    const files = Array.from(e.dataTransfer.files).filter(f =>
+      f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+    );
+
+    if (files.length > 0) {
+      await handleFileUpload(files, categorySelect.value);
+    } else {
+      alert("Solo file PDF sono accettati.");
+    }
+  });
+}
+
+// ─── Handle File Upload ─────────────────────────────────────────────────────
+async function handleFileUpload(files, category) {
+  const dropzone = document.getElementById("datasheetDropzone");
+  dropzone.classList.add("uploading");
+
+  try {
+    for (const file of files) {
+      console.log(`Uploading ${file.name} to ${category}...`);
+      await uploadDatasheet(file, category);
+    }
+
+    // Refresh library
+    await fetchDatasheetsFromBackend();
+    renderDatasheetLibrary();
+    renderDatasheetSelector("datasheetSelector");
+    renderDatasheetSelector("manualDatasheetSelector");
+
+    console.log("Upload completed!");
+  } catch (error) {
+    alert("Errore upload: " + error.message);
+  } finally {
+    dropzone.classList.remove("uploading");
+  }
+}
+
+// Initialize datasheet system
+async function initDatasheetSystem() {
+  await fetchDatasheetsFromBackend();
+  renderDatasheetLibrary();
+  renderDatasheetSelector("datasheetSelector");
+  renderDatasheetSelector("manualDatasheetSelector");
+  initDatasheetDropzone();
+}
+
+// Initialize after DOM is ready
+document.addEventListener("DOMContentLoaded", initDatasheetSystem);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Catalog Excel Export/Import
+// ═══════════════════════════════════════════════════════════════════════════
+
+const CATALOG_EXPORT_URL = "http://localhost:8000/catalog/export";
+const CATALOG_IMPORT_URL = "http://localhost:8000/catalog/import";
+
+function initCatalogManagement() {
+  const downloadBtn = document.getElementById("downloadCatalogBtn");
+  const dropzone = document.getElementById("catalogDropzone");
+  const fileInput = document.getElementById("catalogFileInput");
+  const statusDiv = document.getElementById("catalogStatus");
+
+  if (!downloadBtn || !dropzone || !fileInput) return;
+
+  // Download button
+  downloadBtn.addEventListener("click", () => {
+    showCatalogStatus("Scaricamento in corso...", "info");
+    window.location.href = CATALOG_EXPORT_URL;
+    setTimeout(() => {
+      showCatalogStatus("", "");
+    }, 2000);
+  });
+
+  // Dropzone click to trigger file input
+  dropzone.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  // Drag and drop events
+  dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.classList.add("dragover");
+  });
+
+  dropzone.addEventListener("dragleave", () => {
+    dropzone.classList.remove("dragover");
+  });
+
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      uploadCatalogFile(files[0]);
+    }
+  });
+
+  // File input change
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length > 0) {
+      uploadCatalogFile(fileInput.files[0]);
+      fileInput.value = ""; // Reset for next upload
+    }
+  });
+}
+
+function showCatalogStatus(message, type) {
+  const statusDiv = document.getElementById("catalogStatus");
+  if (!statusDiv) return;
+
+  statusDiv.textContent = message;
+  statusDiv.className = "catalog-status";
+  if (type) {
+    statusDiv.classList.add(`status-${type}`);
+  }
+}
+
+async function uploadCatalogFile(file) {
+  // Validate file type
+  if (!file.name.toLowerCase().endsWith(".xlsx")) {
+    showCatalogStatus("Errore: Il file deve essere in formato Excel (.xlsx)", "error");
+    return;
+  }
+
+  showCatalogStatus("Caricamento in corso...", "info");
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch(CATALOG_IMPORT_URL, {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      showCatalogStatus(`Errore: ${result.detail || "Caricamento fallito"}`, "error");
+      return;
+    }
+
+    // Success - reload catalog
+    showCatalogStatus(
+      `Listino aggiornato: ${result.items_imported} prodotti importati`,
+      "success"
+    );
+
+    // Reload the catalog and refresh UI
+    await loadCatalog();
+    populateModels();
+    populateManualSystemsSelector();
+
+    // Clear status after a few seconds
+    setTimeout(() => {
+      showCatalogStatus("", "");
+    }, 5000);
+
+  } catch (error) {
+    console.error("Catalog upload error:", error);
+    showCatalogStatus("Errore di connessione al server", "error");
+  }
+}
+
+// Initialize catalog management after DOM is ready
+document.addEventListener("DOMContentLoaded", initCatalogManagement);
+
 // ─── Catalog Loading ───────────────────────────────────────────────────────
 async function loadCatalog() {
   const res = await fetch(CATALOG_URL, { cache: "no-store" });
@@ -168,6 +759,7 @@ function populateModels() {
     const id = sel.value;
     selectedOffer = (catalog || []).find((x) => x.id === id) || null;
     selectedTermMonths = null;
+    populateTerms(selectedOffer);
     applySelectedOffer();
     debounceRecalc();
   });
@@ -210,7 +802,8 @@ function populateTerms(offer) {
 }
 
 function applySelectedOffer() {
-  populateTerms(selectedOffer);
+  // Note: populateTerms is called separately when model changes, not here
+  // to avoid resetting the dropdown when user changes the term
 
   if (!selectedOffer || !selectedTermMonths) {
     return;
@@ -271,7 +864,6 @@ function buildPayload() {
   return {
     consumo_annuo_kwh: numberValue("consumo_annuo_kwh"),
     prezzo_energia_eur_kwh: numberValue("prezzo_energia_eur_kwh"),
-    quota_fissa_annua_eur: numberValue("quota_fissa_annua_eur"),
 
     costo_impianto_eur: numberValue("costo_impianto_eur"),
     costo_finanziato_eur: costoFinanziato,
@@ -609,31 +1201,21 @@ function drawCharts(response) {
   drawCashflowBars(bars, response.cashflow_anni || []);
 }
 
-// ─── API Calls ─────────────────────────────────────────────────────────────
+// ─── Calculation (Local - PWA Offline-capable) ─────────────────────────────
 let timer = null;
 
-async function recalc() {
+function recalc() {
   const payload = buildPayload();
 
-  setStatus("Calcolo in corso…");
   try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      setStatus("Errore input: controlla i valori.");
-      document.getElementById("messaggio").textContent = data?.detail ? JSON.stringify(data.detail) : "Errore.";
-      return;
-    }
-
+    // Use local calculator (works offline)
+    const data = Calculator.calcResponse(payload);
     setStatus("");
     render(data);
   } catch (err) {
-    setStatus("API non raggiungibile: avvia il backend su http://localhost:8000");
+    console.error("Calculation error:", err);
+    setStatus("Errore nel calcolo: controlla i valori.");
+    document.getElementById("messaggio").textContent = "Errore nei dati inseriti.";
   }
 }
 
@@ -704,6 +1286,82 @@ init();
 
 let selectedManualSystems = [];
 
+function initManualQuoteModal() {
+  const modal = document.getElementById("manualQuoteModal");
+  const openBtn = document.getElementById("openManualModal");
+  const closeBtn = document.getElementById("manualModalClose");
+  const cancelBtn = document.getElementById("manualModalCancel");
+
+  if (!modal || !openBtn) return;
+
+  function openModal() {
+    modal.classList.add("active");
+    // Refresh datasheet selector when modal opens
+    renderDatasheetSelector("manualDatasheetSelector");
+
+    // Pre-populate from main calculator if a system is selected
+    if (selectedOffer) {
+      // Find and check the corresponding checkbox (id format: manual-{item.id})
+      const checkbox = document.getElementById(`manual-${selectedOffer.id}`);
+      if (checkbox && !checkbox.checked) {
+        checkbox.checked = true;
+        // Add selected class to parent item
+        const itemDiv = checkbox.closest('.multi-select-item');
+        if (itemDiv) {
+          itemDiv.classList.add('selected');
+        }
+        // Add to selectedManualSystems if not already present
+        if (!selectedManualSystems.find(s => s.id === selectedOffer.id)) {
+          selectedManualSystems.push(selectedOffer);
+        }
+      }
+
+      // Pre-fill financing duration from main form
+      const anniFinanziamento = numberValue("anni_finanziamento");
+      if (anniFinanziamento) {
+        document.getElementById("manualAnniFinanziamento").value = anniFinanziamento;
+      }
+
+      // Pre-fill TAEG from main form
+      const taeg = numberValue("taeg_annuo_percent");
+      if (taeg) {
+        document.getElementById("manualTaegPercent").value = taeg;
+      }
+
+      // Update summary and total price
+      updateManualSummary();
+    }
+
+    // If we have calculation data, suggest including savings
+    const savingsCheckbox = document.getElementById("includeSavingsCalc");
+    if (savingsCheckbox && lastResponse) {
+      // Don't auto-check, but user can choose
+      // Just ensure checkbox is visible/enabled
+    }
+  }
+
+  function closeModal() {
+    modal.classList.remove("active");
+  }
+
+  openBtn.addEventListener("click", openModal);
+  closeBtn.addEventListener("click", closeModal);
+  cancelBtn.addEventListener("click", closeModal);
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.classList.contains("active")) {
+      closeModal();
+    }
+  });
+
+  // Pre-load PDF assets in background
+  initPdfAssets();
+}
+
 function initManualQuote() {
   const container = document.getElementById("manualSystemsContainer");
   const summaryEl = document.getElementById("selectedSystemsSummary");
@@ -712,6 +1370,9 @@ function initManualQuote() {
   const generateBtn = document.getElementById("generateManualQuote");
 
   if (!container || !catalog) return;
+
+  // Initialize modal management
+  initManualQuoteModal();
 
   // Populate multi-select with systems grouped by category
   const grouped = groupByCategory(catalog);
@@ -770,12 +1431,15 @@ function initManualQuote() {
   }
 
   // Payment type toggle
+  const taegOptionsEl = document.getElementById("manualTaegOptions");
   paymentTypeRadios.forEach(radio => {
     radio.addEventListener("change", (e) => {
       if (e.target.value === "rate") {
         rateOptionsEl.style.display = "block";
+        if (taegOptionsEl) taegOptionsEl.style.display = "block";
       } else {
         rateOptionsEl.style.display = "none";
+        if (taegOptionsEl) taegOptionsEl.style.display = "none";
       }
     });
   });
@@ -799,6 +1463,7 @@ function toggleManualSystem(item, isSelected, itemDiv) {
 
 function updateManualSummary() {
   const summaryEl = document.getElementById("selectedSystemsSummary");
+  const totalPriceInput = document.getElementById("manualTotalPrice");
   const count = selectedManualSystems.length;
   const total = selectedManualSystems.reduce((sum, s) => sum + Number(s.prezzo_eur), 0);
 
@@ -810,6 +1475,11 @@ function updateManualSummary() {
     <span class="summary-count">${countText}</span>
     <span class="summary-total">Totale: ${euro(total)}</span>
   `;
+
+  // Auto-update total price field
+  if (totalPriceInput) {
+    totalPriceInput.value = total;
+  }
 }
 
 async function generateManualQuote() {
@@ -823,16 +1493,30 @@ async function generateManualQuote() {
   const clienteNote = document.getElementById("manualClienteNote").value.trim();
   const paymentType = document.querySelector('input[name="paymentType"]:checked').value;
   const anniFinanziamento = paymentType === "rate" ? Number(document.getElementById("manualAnniFinanziamento").value) : 0;
+  const taegPercent = paymentType === "rate" ? Number(document.getElementById("manualTaegPercent").value) : 0;
+  const customTotalPrice = Number(document.getElementById("manualTotalPrice").value) || 0;
+  const ivaType = document.getElementById("manualIvaType").value; // "inclusa" or "esclusa"
+  const includeSavings = document.getElementById("includeSavingsCalc").checked;
+
+  // If savings is requested but no calculation data available, warn user
+  if (includeSavings && !lastResponse) {
+    alert("Per includere il calcolo del risparmio, configura prima i dati della bolletta nella sezione 'Impianto Fotovoltaico'");
+    return;
+  }
 
   if (!pdfAssets.loaded) {
     await initPdfAssets();
   }
 
-  generateManualPDF(clienteName, clienteIndirizzo, clienteNote, selectedManualSystems, paymentType, anniFinanziamento);
+  await generateManualPDF(clienteName, clienteIndirizzo, clienteNote, selectedManualSystems, paymentType, anniFinanziamento, taegPercent, customTotalPrice, ivaType, includeSavings, lastResponse);
+
+  // Close modal after generating
+  const modal = document.getElementById("manualQuoteModal");
+  if (modal) modal.classList.remove("active");
 }
 
 // ─── Generate Manual PDF ────────────────────────────────────────────────────
-function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, systems, paymentType, anniFinanziamento) {
+async function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, systems, paymentType, anniFinanziamento, taegPercent = 0, customTotalPrice = 0, ivaType = "inclusa", includeSavings = false, savingsData = null) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({
     orientation: "portrait",
@@ -867,7 +1551,22 @@ function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, systems, 
   }
 
   // Calculate totals
-  const totalPrice = systems.reduce((sum, s) => sum + Number(s.prezzo_eur), 0);
+  // Use custom total price if provided, otherwise sum from systems
+  const systemsTotal = systems.reduce((sum, s) => sum + Number(s.prezzo_eur), 0);
+  const totalPriceBase = customTotalPrice > 0 ? customTotalPrice : systemsTotal;
+
+  // IVA calculation: catalog prices are IVA inclusa (10%)
+  // If user selects "esclusa", we show the price without IVA
+  const IVA_RATE = 0.10;
+  let totalPrice, ivaLabel;
+  if (ivaType === "esclusa") {
+    totalPrice = Math.round(totalPriceBase / (1 + IVA_RATE));
+    ivaLabel = "IVA esclusa";
+  } else {
+    totalPrice = totalPriceBase;
+    ivaLabel = "IVA inclusa";
+  }
+
   const totalPotenza = systems.reduce((sum, s) => sum + Number(s.potenza_kw || 0), 0);
   const mesiFinanziamento = anniFinanziamento * 12;
 
@@ -1078,19 +1777,29 @@ function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, systems, 
 
     y += 20;
 
-    // Calculate simple monthly rate (without TAEG for manual quotes)
-    const rataMensile = totalPrice / mesiFinanziamento;
+    // Calculate monthly rate (with TAEG if provided)
+    let rataMensile;
+    if (taegPercent > 0) {
+      // PMT formula with TAEG
+      const taegMensile = taegPercent / 100 / 12;
+      rataMensile = totalPrice * (taegMensile * Math.pow(1 + taegMensile, mesiFinanziamento)) / (Math.pow(1 + taegMensile, mesiFinanziamento) - 1);
+    } else {
+      rataMensile = totalPrice / mesiFinanziamento;
+    }
 
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(margin + 5, y, contentWidth - 10, 24, 4, 4, 'F');
 
     setFont("bold", 14);
     doc.setTextColor(60, 60, 60);
-    doc.text(euro(totalPrice) + " iva esc al 10%", margin + 18, y + 16);
+    doc.text(euro(totalPrice) + " " + ivaLabel, margin + 18, y + 16);
 
     setFont("bold", 18);
     doc.setTextColor(196, 30, 58);
-    doc.text(euroMonthly(rataMensile), pageWidth - margin - 18, y + 16, { align: "right" });
+    const rataText = taegPercent > 0
+      ? euroMonthly(rataMensile) + " (TAEG " + taegPercent + "%)"
+      : euroMonthly(rataMensile);
+    doc.text(rataText, pageWidth - margin - 18, y + 16, { align: "right" });
 
     y += 35;
 
@@ -1114,7 +1823,7 @@ function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, systems, 
 
     setFont("bold", 20);
     doc.setTextColor(196, 30, 58);
-    doc.text(euro(totalPrice) + " iva esc al 10%", margin + 18, y + 24);
+    doc.text(euro(totalPrice) + " " + ivaLabel, margin + 18, y + 24);
 
     y += 40;
   }
@@ -1147,7 +1856,220 @@ function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, systems, 
   doc.text("Findomestic  |  COMPASS  |  FIDITALIA  |  Banca Sella", pageWidth / 2, pageHeight - 16, { align: "center" });
 
   // ═══════════════════════════════════════════════════════════════════════
-  // PAGE 4: Terms & Contact
+  // OPTIONAL: Economic Analysis Page (if includeSavings is true)
+  // ═══════════════════════════════════════════════════════════════════════
+  if (includeSavings && savingsData) {
+    doc.addPage();
+
+    if (pdfAssets.images.pageBaseClean) {
+      addBackgroundImage(pdfAssets.images.pageBaseClean);
+    }
+
+    y = 45;
+
+    // Section title
+    setFont("bold", 20);
+    doc.setTextColor(255, 220, 100);
+    doc.text("Analisi Economica", margin + 5, y);
+    y += 18;
+
+    // Current situation box
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, 28, 4, 4, 'F');
+
+    setFont("bold", 13);
+    doc.setTextColor(59, 82, 128);
+    doc.text("Spesa energetica annua attuale:", margin + 12, y + 12);
+
+    setFont("bold", 18);
+    doc.setTextColor(196, 30, 58);
+    doc.text(euro(savingsData.spesa_annua_attuale_eur), pageWidth - margin - 18, y + 12, { align: "right" });
+
+    setFont("normal", 11);
+    doc.setTextColor(100, 100, 100);
+    doc.text("(prima dell'installazione del fotovoltaico)", margin + 12, y + 22);
+
+    y += 38;
+
+    // Financial breakdown
+    setFont("bold", 14);
+    doc.setTextColor(...white);
+    doc.text("Dettaglio costi e benefici annui:", margin + 5, y);
+    y += 12;
+
+    const savingsFinancialItems = [
+      { label: "Rata annua finanziamento (" + anniFinanziamento + " anni)", value: euro(savingsData.rata_annua_impianto_eur), isNegative: true },
+      { label: "Detrazione fiscale annua (recupero IRPEF)", value: "- " + euro(savingsData.detrazione_annua_eur), isNegative: false },
+      { label: "Risparmio in bolletta (autoconsumo)", value: "- " + euro(savingsData.risparmio_bolletta_eur), isNegative: false },
+      { label: "Ricavo vendita energia al GSE", value: "- " + euro(savingsData.ricavo_gse_eur), isNegative: false }
+    ];
+
+    savingsFinancialItems.forEach((item) => {
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(margin + 5, y, contentWidth - 10, 16, 3, 3, 'F');
+
+      setFont("normal", 11);
+      doc.setTextColor(60, 60, 60);
+      doc.text(item.label, margin + 12, y + 11);
+
+      setFont("bold", 12);
+      doc.setTextColor(item.isNegative ? 196 : 39, item.isNegative ? 30 : 174, item.isNegative ? 58 : 96);
+      doc.text(item.value, pageWidth - margin - 18, y + 11, { align: "right" });
+
+      y += 19;
+    });
+
+    y += 12;
+
+    // Result box
+    const delta = savingsData.delta_vs_spesa_attuale_eur;
+    const isPositiveSavings = delta <= 0;
+
+    doc.setFillColor(isPositiveSavings ? 39 : 196, isPositiveSavings ? 174 : 30, isPositiveSavings ? 96 : 58);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, 40, 5, 5, 'F');
+
+    setFont("bold", 13);
+    doc.setTextColor(...white);
+    doc.text("COSTO NETTO ANNUO CON FOTOVOLTAICO:", margin + 12, y + 14);
+
+    setFont("bold", 22);
+    doc.text(euro(savingsData.costo_netto_annuo_eur), pageWidth - margin - 18, y + 14, { align: "right" });
+
+    setFont("bold", 12);
+    doc.text(isPositiveSavings ? "RISPARMIO RISPETTO AD OGGI:" : "DIFFERENZA:", margin + 12, y + 30);
+
+    setFont("bold", 16);
+    const savingsDeltaText = isPositiveSavings
+      ? euro(Math.abs(delta)) + " ALL'ANNO!"
+      : euro(delta) + " all'anno";
+    doc.text(savingsDeltaText, pageWidth - margin - 18, y + 30, { align: "right" });
+
+    y += 50;
+
+    // After financing box
+    const yearAfterFinancing = savingsData.cashflow_anni.find((x) => x.anno === anniFinanziamento + 1);
+    if (yearAfterFinancing) {
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(margin + 5, y, contentWidth - 10, 30, 4, 4, 'F');
+
+      setFont("bold", 12);
+      doc.setTextColor(59, 82, 128);
+      doc.text("DOPO IL FINANZIAMENTO (Anno " + (anniFinanziamento + 1) + " in poi):", margin + 12, y + 12);
+
+      setFont("bold", 14);
+      doc.setTextColor(39, 174, 96);
+      doc.text("Risparmio netto: " + euro(Math.abs(yearAfterFinancing.costo_netto_eur)) + "/anno", margin + 12, y + 24);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // OPTIONAL: 25-Year Projection Page
+    // ═══════════════════════════════════════════════════════════════════════
+    doc.addPage();
+
+    if (pdfAssets.images.pageBaseClean) {
+      addBackgroundImage(pdfAssets.images.pageBaseClean);
+    }
+
+    y = 45;
+
+    // Section title
+    setFont("bold", 20);
+    doc.setTextColor(255, 220, 100);
+    doc.text("Proiezione a 25 Anni", margin + 5, y);
+    y += 20;
+
+    // Visual bar chart for key years
+    const keyYears = [1, 5, 10, 15, 20, 25];
+    const chartHeight = 100;
+    const chartStartY = y;
+    const barWidth = 22;
+    const chartLeftMargin = margin + 25;
+    const barSpacing = (contentWidth - 50) / keyYears.length;
+
+    // Find max absolute value for scaling
+    const keyYearData = keyYears.map(yr => savingsData.cashflow_anni.find(r => r.anno === yr));
+    const maxAbsValue = Math.max(...keyYearData.map(d => Math.abs(d?.costo_netto_eur || 0)), 100);
+
+    // Draw chart background
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, chartHeight + 70, 5, 5, 'F');
+
+    // Draw zero line
+    const zeroLineY = chartStartY + 25 + chartHeight / 2;
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.5);
+    doc.line(chartLeftMargin - 10, zeroLineY, pageWidth - margin - 20, zeroLineY);
+
+    // Draw bars for key years
+    keyYears.forEach((yr, i) => {
+      const yearData = savingsData.cashflow_anni.find(r => r.anno === yr);
+      if (!yearData) return;
+
+      const value = yearData.costo_netto_eur;
+      const barX = chartLeftMargin + i * barSpacing;
+      const barHeight = Math.abs(value) / maxAbsValue * (chartHeight / 2 - 10);
+      const isNegativeBar = value <= 0;
+
+      // Bar color
+      if (isNegativeBar) {
+        doc.setFillColor(39, 174, 96);
+      } else {
+        doc.setFillColor(196, 30, 58);
+      }
+
+      // Draw bar
+      if (isNegativeBar) {
+        doc.roundedRect(barX, zeroLineY - barHeight, barWidth, barHeight, 2, 2, 'F');
+      } else {
+        doc.roundedRect(barX, zeroLineY, barWidth, barHeight, 2, 2, 'F');
+      }
+
+      // Year label
+      setFont("bold", 11);
+      doc.setTextColor(60, 60, 60);
+      doc.text("Anno " + yr, barX + barWidth / 2, chartStartY + chartHeight + 35, { align: "center" });
+
+      // Value label
+      setFont("normal", 9);
+      doc.setTextColor(isNegativeBar ? 39 : 196, isNegativeBar ? 174 : 30, isNegativeBar ? 96 : 58);
+      const valueY = isNegativeBar ? zeroLineY - barHeight - 5 : zeroLineY + barHeight + 10;
+      doc.text(euro(value), barX + barWidth / 2, valueY, { align: "center" });
+    });
+
+    // Legend
+    const legendY = chartStartY + chartHeight + 50;
+
+    doc.setFillColor(39, 174, 96);
+    doc.rect(margin + 45, legendY, 12, 8, 'F');
+    setFont("bold", 11);
+    doc.setTextColor(60, 60, 60);
+    doc.text("Risparmio", margin + 62, legendY + 6);
+
+    doc.setFillColor(196, 30, 58);
+    doc.rect(margin + 115, legendY, 12, 8, 'F');
+    doc.text("Costo", margin + 132, legendY + 6);
+
+    y = chartStartY + chartHeight + 80;
+
+    // 25-year total summary box
+    const total25 = savingsData.cashflow_anni.reduce((sum, row) => sum + row.costo_netto_eur, 0);
+
+    doc.setFillColor(total25 <= 0 ? 39 : 196, total25 <= 0 ? 174 : 30, total25 <= 0 ? 96 : 58);
+    doc.roundedRect(margin + 5, y, contentWidth - 10, 35, 5, 5, 'F');
+
+    setFont("bold", 14);
+    doc.setTextColor(...white);
+    doc.text("BILANCIO TOTALE 25 ANNI:", margin + 15, y + 15);
+
+    setFont("bold", 20);
+    const total25Label = total25 <= 0
+      ? "RISPARMIO: " + euro(Math.abs(total25))
+      : "COSTO: " + euro(total25);
+    doc.text(total25Label, pageWidth - margin - 18, y + 23, { align: "right" });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // PAGE: Terms & Contact (final page)
   // ═══════════════════════════════════════════════════════════════════════
   doc.addPage();
 
@@ -1249,6 +2171,24 @@ function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, systems, 
 
   // Save the PDF
   const fileName = `Preventivo_Manuale_${clienteName.replace(/\s+/g, "_")}_${today.toISOString().split('T')[0]}.pdf`;
+
+  // Check if datasheets should be included (from selector)
+  const selectedDatasheets = getSelectedDatasheetsFromSelector("manualDatasheetSelector");
+
+  if (selectedDatasheets.length > 0) {
+    try {
+      console.log(`Merging ${selectedDatasheets.length} datasheets with manual quote...`);
+      const quotePdfBytes = doc.output("arraybuffer");
+      const mergedPdfBytes = await mergeQuoteWithDatasheets(quotePdfBytes, selectedDatasheets);
+      downloadPdfBlob(mergedPdfBytes, fileName);
+      console.log("Manual PDF with datasheets generated successfully!");
+      return;
+    } catch (error) {
+      console.error("Error merging datasheets, falling back to quote only:", error);
+    }
+  }
+
+  // Fallback: save quote only
   doc.save(fileName);
 }
 
@@ -1371,71 +2311,9 @@ function registerFonts(doc) {
   return true;
 }
 
-// ─── Modal Management ──────────────────────────────────────────────────────
-function initPdfModal() {
-  const modal = document.getElementById("pdfModal");
-  const openBtn = document.getElementById("openPdfModal");
-  const closeBtn = document.getElementById("modalClose");
-  const cancelBtn = document.getElementById("modalCancel");
-  const generateBtn = document.getElementById("generatePdf");
-  const clienteNameInput = document.getElementById("clienteName");
-
-  function openModal() {
-    modal.classList.add("active");
-    clienteNameInput.focus();
-  }
-
-  function closeModal() {
-    modal.classList.remove("active");
-  }
-
-  openBtn.addEventListener("click", openModal);
-  closeBtn.addEventListener("click", closeModal);
-  cancelBtn.addEventListener("click", closeModal);
-
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) closeModal();
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modal.classList.contains("active")) {
-      closeModal();
-    }
-  });
-
-  generateBtn.addEventListener("click", async () => {
-    const clienteName = clienteNameInput.value.trim() || "Cliente";
-    const clienteIndirizzo = document.getElementById("clienteIndirizzo").value.trim();
-    const clienteNote = document.getElementById("clienteNote").value.trim(); // Empty if not filled
-
-    if (!lastResponse) {
-      alert("Effettua prima un calcolo!");
-      return;
-    }
-
-    if (!pdfAssets.loaded) {
-      generateBtn.textContent = "Caricamento assets...";
-      await initPdfAssets();
-      generateBtn.textContent = "Genera PDF";
-    }
-
-    generatePDF(clienteName, clienteIndirizzo, clienteNote, lastResponse);
-    closeModal();
-  });
-
-  // Enter key to generate
-  clienteNameInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      generateBtn.click();
-    }
-  });
-
-  // Pre-load assets in background
-  initPdfAssets();
-}
 
 // ─── PDF Generation ────────────────────────────────────────────────────────
-function generatePDF(clienteName, clienteIndirizzo, clienteNote, data) {
+async function generatePDF(clienteName, clienteIndirizzo, clienteNote, data) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({
     orientation: "portrait",
@@ -2059,8 +2937,23 @@ function generatePDF(clienteName, clienteIndirizzo, clienteNote, data) {
 
   // Save the PDF
   const fileName = `Preventivo_${clienteName.replace(/\s+/g, "_")}_${today.toISOString().split('T')[0]}.pdf`;
+
+  // Check if datasheets should be included (from selector)
+  const selectedDatasheets = getSelectedDatasheetsFromSelector("datasheetSelector");
+
+  if (selectedDatasheets.length > 0) {
+    try {
+      console.log(`Merging ${selectedDatasheets.length} datasheets with quote...`);
+      const quotePdfBytes = doc.output("arraybuffer");
+      const mergedPdfBytes = await mergeQuoteWithDatasheets(quotePdfBytes, selectedDatasheets);
+      downloadPdfBlob(mergedPdfBytes, fileName);
+      console.log("PDF with datasheets generated successfully!");
+      return;
+    } catch (error) {
+      console.error("Error merging datasheets, falling back to quote only:", error);
+    }
+  }
+
+  // Fallback: save quote only
   doc.save(fileName);
 }
-
-// Initialize PDF modal after DOM is ready
-document.addEventListener("DOMContentLoaded", initPdfModal);

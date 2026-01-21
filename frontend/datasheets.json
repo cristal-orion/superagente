@@ -1,0 +1,113 @@
+{
+  "version": "1.0",
+  "description": "Mapping prodotti -> schede tecniche PDF",
+  "basePath": "./datasheets/",
+  "components": {
+    "panels": {
+      "default": {
+        "file": "panels/pannelli-standard.pdf",
+        "name": "Moduli Fotovoltaici"
+      }
+    },
+    "inverters": {
+      "standard": {
+        "mono": { "file": "inverters/standard-mono.pdf", "name": "Inverter Monofase" },
+        "tri": { "file": "inverters/standard-tri.pdf", "name": "Inverter Trifase" }
+      },
+      "huawei": {
+        "mono": { "file": "inverters/huawei-mono.pdf", "name": "Inverter Huawei Monofase" },
+        "tri": { "file": "inverters/huawei-tri.pdf", "name": "Inverter Huawei Trifase" }
+      },
+      "fox": {
+        "mono": { "file": "inverters/fox-mono.pdf", "name": "Inverter Fox ESS Monofase" },
+        "tri": { "file": "inverters/fox-tri.pdf", "name": "Inverter Fox ESS Trifase" }
+      },
+      "tesla": {
+        "mono": { "file": "inverters/tesla-gateway.pdf", "name": "Tesla Gateway" }
+      },
+      "compass": {
+        "mono": { "file": "inverters/compass-mono.pdf", "name": "Inverter Compass Monofase" },
+        "tri": { "file": "inverters/compass-tri.pdf", "name": "Inverter Compass Trifase" }
+      },
+      "ie": {
+        "mono": { "file": "inverters/industriale.pdf", "name": "Inverter Industriale" },
+        "tri": { "file": "inverters/industriale-tri.pdf", "name": "Inverter Industriale Trifase" }
+      }
+    },
+    "batteries": {
+      "huawei": {
+        "5": { "file": "batteries/huawei-luna-5kwh.pdf", "name": "Huawei LUNA 2000 5kWh" },
+        "7": { "file": "batteries/huawei-luna-5kwh.pdf", "name": "Huawei LUNA 2000 5+2kWh" },
+        "10": { "file": "batteries/huawei-luna-10kwh.pdf", "name": "Huawei LUNA 2000 10kWh" },
+        "14": { "file": "batteries/huawei-luna-15kwh.pdf", "name": "Huawei LUNA 2000 15kWh" },
+        "15": { "file": "batteries/huawei-luna-15kwh.pdf", "name": "Huawei LUNA 2000 15kWh" },
+        "21": { "file": "batteries/huawei-luna-21kwh.pdf", "name": "Huawei LUNA 2000 21kWh" }
+      },
+      "fox": {
+        "5": { "file": "batteries/fox-ess-5kwh.pdf", "name": "Fox ESS HV 5kWh" },
+        "11": { "file": "batteries/fox-ess-11kwh.pdf", "name": "Fox ESS HV 11kWh" },
+        "15": { "file": "batteries/fox-ess-15kwh.pdf", "name": "Fox ESS HV 15kWh" },
+        "22": { "file": "batteries/fox-ess-22kwh.pdf", "name": "Fox ESS HV 22kWh" },
+        "33": { "file": "batteries/fox-ess-33kwh.pdf", "name": "Fox ESS HV 33kWh" },
+        "44": { "file": "batteries/fox-ess-44kwh.pdf", "name": "Fox ESS HV 44kWh" },
+        "55": { "file": "batteries/fox-ess-55kwh.pdf", "name": "Fox ESS HV 55kWh" }
+      },
+      "tesla": {
+        "13.5": { "file": "batteries/tesla-powerwall.pdf", "name": "Tesla Powerwall 13.5kWh" }
+      }
+    },
+    "heatpumps": {
+      "default": {
+        "file": "heatpumps/pompa-calore.pdf",
+        "name": "Pompa di Calore"
+      }
+    }
+  },
+  "productPrefixes": {
+    "p1": {
+      "brand": "standard",
+      "hasStorage": false,
+      "segment": "residenziale"
+    },
+    "p2": {
+      "brand": "huawei",
+      "hasStorage": true,
+      "segment": "residenziale"
+    },
+    "p3": {
+      "brand": "fox",
+      "hasStorage": true,
+      "segment": "residenziale"
+    },
+    "p4": {
+      "brand": "tesla",
+      "hasStorage": true,
+      "segment": "residenziale"
+    },
+    "p5": {
+      "brand": "compass",
+      "hasStorage": false,
+      "segment": "aziende"
+    },
+    "p6": {
+      "brand": "huawei",
+      "hasStorage": true,
+      "segment": "aziende"
+    },
+    "p7": {
+      "brand": "fox",
+      "hasStorage": true,
+      "segment": "aziende"
+    },
+    "p8": {
+      "brand": "ie",
+      "hasStorage": false,
+      "segment": "industriale"
+    },
+    "p9": {
+      "brand": "fox",
+      "hasStorage": true,
+      "segment": "industriale"
+    }
+  }
+}

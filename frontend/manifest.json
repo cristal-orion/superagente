@@ -1,0 +1,21 @@
+{
+  "name": "PV Sales Calculator",
+  "short_name": "PV Calc",
+  "description": "Calcolatore per impianti fotovoltaici - Tech Solutions",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#f59e0b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./logotech.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "it",
+  "dir": "ltr"
+}

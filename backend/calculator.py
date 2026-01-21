@@ -3,8 +3,8 @@ from __future__ import annotations
 from .models import CalcRequest, CalcResponse, CashflowYear
 
 
-def calc_spesa_annua_attuale(consumo: float, prezzo: float, quota_fissa: float) -> float:
-    return (consumo * prezzo) + quota_fissa
+def calc_spesa_annua_attuale(consumo: float, prezzo: float) -> float:
+    return consumo * prezzo
 
 
 def calc_rata_annua_semplice(costo: float, anni: int) -> float:
@@ -44,7 +44,6 @@ def calc_response(request: CalcRequest) -> CalcResponse:
     spesa_attuale = calc_spesa_annua_attuale(
         request.consumo_annuo_kwh,
         request.prezzo_energia_eur_kwh,
-        request.quota_fissa_annua_eur,
     )
 
     capitale_finanziato = (
