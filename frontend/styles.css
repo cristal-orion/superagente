@@ -1280,8 +1280,10 @@ input[type="number"] {
 
 .selected-systems-summary {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-sm);
   margin-top: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-elevated);
@@ -1808,20 +1810,21 @@ input[type="number"] {
   width: 100%;
   padding: var(--space-md) var(--space-lg);
   margin: var(--space-sm) 0;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
-  color: white;
+  background: linear-gradient(135deg, #C41E3A, #9B1830);
+  color: #ffffff;
   border: none;
   border-radius: var(--radius-md);
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(196, 30, 58, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .btn-open-manual-modal:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 6px 20px rgba(196, 30, 58, 0.4);
 }
 
 .btn-open-manual-modal:active {
@@ -1836,18 +1839,46 @@ input[type="number"] {
 .modal-large {
   max-width: 900px;
   width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-large .modal-header {
+  flex: 0 0 auto;
+}
+
+.modal-large .modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.modal-large .modal-footer {
+  flex: 0 0 auto;
 }
 
 .modal-two-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-xl);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .modal-column {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0; /* Prevent grid blowout */
+  overflow: hidden;
+}
+
+.modal-column input,
+.modal-column select,
+.modal-column textarea {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-column .multi-select-container {
@@ -1861,16 +1892,105 @@ input[type="number"] {
 
 /* Responsive: stack columns on smaller screens */
 @media (max-width: 768px) {
+  .modal-overlay {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modal-large {
+    max-width: 100%;
+  }
+
+  .modal-header {
+    flex: 0 0 auto;
+    padding: var(--space-md);
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .modal-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--space-md);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-footer {
+    flex: 0 0 auto;
+    padding: var(--space-md);
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border-subtle);
+  }
+
   .modal-two-columns {
     grid-template-columns: 1fr;
     gap: var(--space-lg);
   }
 
-  .modal-large {
-    max-width: 95%;
+  .modal-column .multi-select-container {
+    max-height: 250px;
   }
 
-  .modal-column .multi-select-container {
-    max-height: 200px;
+  .modal-column .datasheet-selector {
+    max-height: 180px;
   }
+
+  /* Larger touch targets */
+  .modal-body input[type="text"],
+  .modal-body input[type="number"],
+  .modal-body select,
+  .modal-body textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    padding: var(--space-md);
+    min-height: 48px;
+  }
+
+  .radio-option,
+  .checkbox-option {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .btn {
+    min-height: 48px;
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  /* Mobile layout: reorder so results appear before management sections */
+  .main-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .input-panel,
+  .calc-form {
+    display: contents;
+  }
+
+  /* Order: Input sections first, then results, then management sections at bottom */
+  details.input-section:nth-of-type(1) { order: 1; } /* Consumi Attuali */
+  details.input-section:nth-of-type(2) { order: 2; } /* Impianto Fotovoltaico */
+  .btn-open-manual-modal { order: 3; } /* Genera Preventivo button */
+  .results-panel { order: 4; } /* Charts and results */
+  details.input-section:nth-of-type(3) { order: 5; } /* Gestione Schede Tecniche */
+  details.input-section:nth-of-type(4) { order: 6; } /* Gestione Listino */
+  details.input-section:nth-of-type(5) { order: 7; } /* Parametri Avanzati */
 }
