@@ -1,75 +1,114 @@
-# PV Sales Calculator (MVP)
+# PV Sales Calculator
 
-Web app minimale per calcolare se un impianto fotovoltaico “si ripaga da solo” ogni anno confrontando:
+Web app per agenti di vendita di impianti fotovoltaici. Calcola se un impianto "si ripaga da solo" confrontando costi attuali di energia vs finanziamento + risparmio. Utilizzabile durante gli appuntamenti con i clienti.
 
-- spesa annua attuale in bolletta
-- costo annuo del finanziamento
-- detrazione fiscale annua (parametrica)
-- risparmio annuo stimato da autoconsumo
-- ricavo annuo stimato da energia immessa (GSE)
+## Funzionalità
 
-## Requisiti
+- **Calcolo ROI** - Confronto spesa attuale vs costo finanziamento + risparmio
+- **Cashflow 25 anni** - Proiezione dettagliata anno per anno
+- **Generazione preventivi PDF** - Documento professionale multi-pagina
+- **Catalogo prodotti** - Listino con sistemi residenziali, aziendali e industriali
+- **Import listino Excel** - Aggiornamento prezzi da file Excel
+- **Schede tecniche** - Upload e gestione PDF delle schede prodotto
+- **PWA** - Funziona offline, installabile su dispositivi mobili
+- **Tema chiaro/scuro** - Interfaccia adattabile
 
-- Python 3.11+
+## Quick Start
 
-## Setup
+### Sviluppo locale
 
-### Windows (PowerShell)
-
-```powershell
+```bash
+# Setup
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r backend\requirements.txt
-```
-
-### macOS/Linux
-
-```bash
-python -m venv .venv && source .venv/bin/activate
+.\.venv\Scripts\Activate.ps1  # Windows
+# source .venv/bin/activate   # Linux/macOS
 pip install -r backend/requirements.txt
-```
 
-## Avvio backend
-
-```bash
+# Avvia backend (porta 8000)
 uvicorn backend.main:app --reload --port 8000
-```
 
-Verifica:
-
-- `GET http://localhost:8000/health` → `{ "status": "ok" }`
-
-## Avvio frontend
-
-Opzione A (consigliata): server statico su `5173` (origine CORS prevista).
-
-```bash
+# Avvia frontend (porta 5173) - in un altro terminale
 python -m http.server 5173 --directory frontend
 ```
 
-Poi apri `http://localhost:5173/`.
+Apri http://localhost:5173/
 
-Opzione B: apri `frontend/index.html` direttamente (dipende dal browser).
+### Deploy con Docker
 
-## Esempio payload
+```bash
+# Setup iniziale
+chmod +x setup.sh
+./setup.sh
 
-`POST http://localhost:8000/calc`
+# Avvia
+docker-compose up -d --build
 
-```json
-{
-  "consumo_annuo_kwh": 3500,
-  "prezzo_energia_eur_kwh": 0.30,
-  "quota_fissa_annua_eur": 0,
-  "costo_impianto_eur": 12000,
-  "anni_finanziamento": 10,
-  "usa_rata_semplice": true,
-  "taeg_annuo_percent": 0,
-  "produzione_annua_kwh": 4500,
-  "autoconsumo_percent": 40,
-  "prezzo_gse_eur_kwh": 0.10,
-  "aliquota_detrazione_percent": 50,
-  "anni_detrazione": 10,
-  "fattore_prudenza": 1.0
-}
+# Log
+docker-compose logs -f
+
+# Stop
+docker-compose down
 ```
 
+L'app sarà disponibile sulla porta 80.
+
+Vedi [DEPLOY.md](DEPLOY.md) per istruzioni dettagliate.
+
+## Struttura progetto
+
+```
+├── backend/
+│   ├── main.py           # FastAPI app, endpoints API
+│   ├── calculator.py     # Logica calcoli finanziari
+│   ├── models.py         # Modelli Pydantic
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── index.html        # Single-page app
+│   ├── app.js            # Logica frontend, grafici, PDF
+│   ├── styles.css        # Stili e temi
+│   ├── catalog.json      # Catalogo prodotti
+│   ├── datasheets.json   # Mapping schede tecniche
+│   ├── sw.js             # Service worker per offline
+│   └── manifest.json     # PWA manifest
+│
+├── data/                 # Dati persistenti (Docker)
+│   ├── catalog.json
+│   └── datasheets/
+│
+├── docker-compose.yml
+└── DEPLOY.md
+```
+
+## API Endpoints
+
+| Metodo | Endpoint | Descrizione |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| POST | `/calc` | Calcola preventivo |
+| GET | `/datasheets` | Lista schede tecniche |
+| POST | `/datasheets/upload` | Upload scheda PDF |
+| DELETE | `/datasheets/{cat}/{file}` | Elimina scheda |
+| POST | `/catalog/import` | Import listino Excel |
+| GET | `/catalog/export` | Export listino Excel |
+
+## Catalogo prodotti
+
+Il catalogo (`catalog.json`) contiene sistemi organizzati per categoria:
+
+- **Residenziale** - Senza accumulo
+- **Residenziale** - Con accumulo (Huawei/Fox/Tesla)
+- **Aziende** - Senza/Con accumulo (Compass)
+- **Industriale** (I.E.)
+
+Ogni prodotto include: potenza kW, accumulo kWh, fase (mono/tri), prezzo, rate mensili per durata, TAEG.
+
+## Tecnologie
+
+- **Backend**: Python, FastAPI, uvicorn, openpyxl
+- **Frontend**: Vanilla JS, Chart.js (canvas), jsPDF, pdf-lib
+- **Deploy**: Docker, nginx, docker-compose
+
+## License
+
+MIT
