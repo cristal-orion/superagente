@@ -145,7 +145,7 @@ function toggleTheme() {
 // Initialize theme immediately
 initTheme();
 
-const API_URL = "http://localhost:8000/calc";
+const API_URL = "/calc";
 const CATALOG_URL = "./catalog.json";
 const ENERGY_PRICE_DEFAULT = 0.30;
 const KWH_PER_KW_PER_YEAR = 1650;
@@ -235,7 +235,7 @@ let lastResponse = null;
 // Datasheet Module - Backend-based PDF Management with Drag & Drop
 // ═══════════════════════════════════════════════════════════════════════════
 
-const DATASHEETS_API_URL = "http://localhost:8000";
+const DATASHEETS_API_URL = "";
 
 const datasheetConfig = {
   library: {},  // { category: [{ name, filename, url, size }] }
@@ -581,8 +581,8 @@ document.addEventListener("DOMContentLoaded", initDatasheetSystem);
 // Catalog Excel Export/Import
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CATALOG_EXPORT_URL = "http://localhost:8000/catalog/export";
-const CATALOG_IMPORT_URL = "http://localhost:8000/catalog/import";
+const CATALOG_EXPORT_URL = "/catalog/export";
+const CATALOG_IMPORT_URL = "/catalog/import";
 
 function initCatalogManagement() {
   const downloadBtn = document.getElementById("downloadCatalogBtn");
