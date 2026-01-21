@@ -1,0 +1,29 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+.env
+
+# Node (if any)
+node_modules
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# Claude
+.claude
+
+# Playwright
+.playwright-mcp
+
+# Misc
+*.log
+*.tmp
+nul

@@ -1,0 +1,1043 @@
+{
+  "version": "settembre-2025",
+  "source_pdf": "LISTINO TECNOLOGIE SETTEMBRE 2025.pdf",
+  "items": [
+    {
+      "id": "p1-3kw-mono",
+      "category": "Residenziale - Senza accumulo",
+      "label": "3 kW",
+      "potenza_kw": 3.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 6500.0,
+      "rate_mensili_eur": {
+        "60": 137.0,
+        "84": 105.0,
+        "120": 83.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p1-4kw-mono",
+      "category": "Residenziale - Senza accumulo",
+      "label": "4 kW",
+      "potenza_kw": 4.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 7500.0,
+      "rate_mensili_eur": {
+        "60": 157.0,
+        "84": 121.0,
+        "120": 95.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p1-5kw-mono",
+      "category": "Residenziale - Senza accumulo",
+      "label": "5 kW",
+      "potenza_kw": 5.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 8900.0,
+      "rate_mensili_eur": {
+        "60": 185.32,
+        "84": 142.4,
+        "120": 112.23
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p1-6kw-mono",
+      "category": "Residenziale - Senza accumulo",
+      "label": "6 kW",
+      "potenza_kw": 6.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 9900.0,
+      "rate_mensili_eur": {
+        "60": 205.6,
+        "84": 158.0,
+        "120": 124.5
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p1-6kw-tri",
+      "category": "Residenziale - Senza accumulo",
+      "label": "6 kW (TRI)",
+      "potenza_kw": 6.0,
+      "accumulo_kwh": 0.0,
+      "fase": "tri",
+      "prezzo_eur": 10500.0,
+      "rate_mensili_eur": {
+        "60": 218.0,
+        "84": 167.3,
+        "120": 131.9
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p1-8kw-mono",
+      "category": "Residenziale - Senza accumulo",
+      "label": "8 kW",
+      "potenza_kw": 8.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 12000.0,
+      "rate_mensili_eur": {
+        "60": 248.1,
+        "84": 191.0,
+        "120": 150.25
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p1-8kw-tri",
+      "category": "Residenziale - Senza accumulo",
+      "label": "8 kW (TRI)",
+      "potenza_kw": 8.0,
+      "accumulo_kwh": 0.0,
+      "fase": "tri",
+      "prezzo_eur": 12500.0,
+      "rate_mensili_eur": {
+        "60": 258.3,
+        "84": 198.5,
+        "120": 156.4
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p1-10kw-tri",
+      "category": "Residenziale - Senza accumulo",
+      "label": "10 kW",
+      "potenza_kw": 10.0,
+      "accumulo_kwh": 0.0,
+      "fase": "tri",
+      "prezzo_eur": 16000.0,
+      "rate_mensili_eur": {
+        "60": 329.0,
+        "84": 253.0,
+        "120": 199.4
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p2-3kwplus5acc-mono",
+      "category": "Residenziale - Con accumulo (Huawei)",
+      "label": "3 kW + 5 acc",
+      "potenza_kw": 3.0,
+      "accumulo_kwh": 5.0,
+      "fase": "mono",
+      "prezzo_eur": 10500.0,
+      "rate_mensili_eur": {
+        "60": 218.0,
+        "84": 167.3,
+        "120": 131.9
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p2-4kwplus5acc-mono",
+      "category": "Residenziale - Con accumulo (Huawei)",
+      "label": "4 kW + 5 acc",
+      "potenza_kw": 4.0,
+      "accumulo_kwh": 5.0,
+      "fase": "mono",
+      "prezzo_eur": 12000.0,
+      "rate_mensili_eur": {
+        "60": 248.1,
+        "84": 191.0,
+        "120": 150.25
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p2-5kwplus5acc-mono",
+      "category": "Residenziale - Con accumulo (Huawei)",
+      "label": "5 kW + 5 acc",
+      "potenza_kw": 5.0,
+      "accumulo_kwh": 5.0,
+      "fase": "mono",
+      "prezzo_eur": 13000.0,
+      "rate_mensili_eur": {
+        "60": 268.35,
+        "84": 206.2,
+        "120": 162.5
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p2-5kwplus10acc-mono",
+      "category": "Residenziale - Con accumulo (Huawei)",
+      "label": "5 kW + 10 acc",
+      "potenza_kw": 5.0,
+      "accumulo_kwh": 10.0,
+      "fase": "mono",
+      "prezzo_eur": 15500.0,
+      "rate_mensili_eur": {
+        "60": 319.0,
+        "84": 245.1,
+        "120": 193.2
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p2-6kwplus7acc-mono",
+      "category": "Residenziale - Con accumulo (Huawei)",
+      "label": "6 kW + 7 acc",
+      "potenza_kw": 6.0,
+      "accumulo_kwh": 7.0,
+      "fase": "mono",
+      "prezzo_eur": 15000.0,
+      "rate_mensili_eur": {
+        "60": 309.0,
+        "84": 237.4,
+        "120": 187.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p2-6kwplus10acc-mono",
+      "category": "Residenziale - Con accumulo (Huawei)",
+      "label": "6 kW + 10 acc",
+      "potenza_kw": 6.0,
+      "accumulo_kwh": 10.0,
+      "fase": "mono",
+      "prezzo_eur": 15900.0,
+      "rate_mensili_eur": {
+        "60": 327.0,
+        "84": 251.3,
+        "120": 198.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p2-6kwplus14acc-mono",
+      "category": "Residenziale - Con accumulo (Huawei)",
+      "label": "6 kW + 14 acc",
+      "potenza_kw": 6.0,
+      "accumulo_kwh": 14.0,
+      "fase": "mono",
+      "prezzo_eur": 18900.0,
+      "rate_mensili_eur": {
+        "60": 388.0,
+        "84": 298.0,
+        "120": 235.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p2-8kwplus15acc-mono",
+      "category": "Residenziale - Con accumulo (Huawei)",
+      "label": "8 kW + 15 acc",
+      "potenza_kw": 8.0,
+      "accumulo_kwh": 15.0,
+      "fase": "mono",
+      "prezzo_eur": 22000.0,
+      "rate_mensili_eur": {
+        "60": 450.6,
+        "84": 346.3,
+        "120": 273.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p2-8kwplus15acc-tri",
+      "category": "Residenziale - Con accumulo (Huawei)",
+      "label": "8 kW + 15 acc (TRI)",
+      "potenza_kw": 8.0,
+      "accumulo_kwh": 15.0,
+      "fase": "tri",
+      "prezzo_eur": 22500.0,
+      "rate_mensili_eur": {
+        "60": 460.75,
+        "84": 354.0,
+        "120": 279.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p2-8kwplus21acc-tri",
+      "category": "Residenziale - Con accumulo (Huawei)",
+      "label": "8 kW + 21 acc",
+      "potenza_kw": 8.0,
+      "accumulo_kwh": 21.0,
+      "fase": "tri",
+      "prezzo_eur": 24500.0,
+      "rate_mensili_eur": {
+        "60": 501.25,
+        "84": 385.0,
+        "120": 303.6
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 6.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p3-3kwplus5acc-mono",
+      "category": "Residenziale - Con accumulo (Fox)",
+      "label": "3 kW + 5 acc",
+      "potenza_kw": 3.0,
+      "accumulo_kwh": 5.0,
+      "fase": "mono",
+      "prezzo_eur": 10000.0,
+      "rate_mensili_eur": {
+        "60": 207.59,
+        "84": 159.51,
+        "120": 125.8
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p3-4kwplus5acc-mono",
+      "category": "Residenziale - Con accumulo (Fox)",
+      "label": "4 kW + 5 acc",
+      "potenza_kw": 4.0,
+      "accumulo_kwh": 5.0,
+      "fase": "mono",
+      "prezzo_eur": 11500.0,
+      "rate_mensili_eur": {
+        "60": 238.0,
+        "84": 183.0,
+        "120": 144.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p3-5kwplus5acc-mono",
+      "category": "Residenziale - Con accumulo (Fox)",
+      "label": "5 kW + 5 acc",
+      "potenza_kw": 5.0,
+      "accumulo_kwh": 5.0,
+      "fase": "mono",
+      "prezzo_eur": 12500.0,
+      "rate_mensili_eur": {
+        "60": 258.3,
+        "84": 198.5,
+        "120": 156.4
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p3-5kwplus11acc-mono",
+      "category": "Residenziale - Con accumulo (Fox)",
+      "label": "5 kW + 11 acc",
+      "potenza_kw": 5.0,
+      "accumulo_kwh": 11.0,
+      "fase": "mono",
+      "prezzo_eur": 13500.0,
+      "rate_mensili_eur": {
+        "60": 278.5,
+        "84": 214.0,
+        "120": 168.7
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p3-6kwplus11acc-mono",
+      "category": "Residenziale - Con accumulo (Fox)",
+      "label": "6 kW + 11 acc",
+      "potenza_kw": 6.0,
+      "accumulo_kwh": 11.0,
+      "fase": "mono",
+      "prezzo_eur": 13900.0,
+      "rate_mensili_eur": {
+        "60": 286.6,
+        "84": 220.2,
+        "120": 173.6
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p3-8kwplus15acc-mono",
+      "category": "Residenziale - Con accumulo (Fox)",
+      "label": "8 kW + 15 acc",
+      "potenza_kw": 8.0,
+      "accumulo_kwh": 15.0,
+      "fase": "mono",
+      "prezzo_eur": 19900.0,
+      "rate_mensili_eur": {
+        "60": 408.0,
+        "84": 313.6,
+        "120": 247.15
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p3-8kwplus22acc-mono",
+      "category": "Residenziale - Con accumulo (Fox)",
+      "label": "8 kW + 22 acc",
+      "potenza_kw": 8.0,
+      "accumulo_kwh": 22.0,
+      "fase": "mono",
+      "prezzo_eur": 22000.0,
+      "rate_mensili_eur": {
+        "60": 450.7,
+        "84": 346.3,
+        "120": 273.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p3-10kwplus11acc-tri",
+      "category": "Residenziale - Con accumulo (Fox)",
+      "label": "10 kW + 11 acc",
+      "potenza_kw": 10.0,
+      "accumulo_kwh": 11.0,
+      "fase": "tri",
+      "prezzo_eur": 19000.0,
+      "rate_mensili_eur": {
+        "60": 390.0,
+        "84": 299.6,
+        "120": 236.2
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p3-10kwplus15acc-tri",
+      "category": "Residenziale - Con accumulo (Fox)",
+      "label": "10 kW + 15 acc",
+      "potenza_kw": 10.0,
+      "accumulo_kwh": 15.0,
+      "fase": "tri",
+      "prezzo_eur": 22500.0,
+      "rate_mensili_eur": {
+        "60": 460.75,
+        "84": 354.0,
+        "120": 279.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p3-10kwplus22acc-tri",
+      "category": "Residenziale - Con accumulo (Fox)",
+      "label": "10 kW + 22 acc",
+      "potenza_kw": 10.0,
+      "accumulo_kwh": 22.0,
+      "fase": "tri",
+      "prezzo_eur": 27500.0,
+      "rate_mensili_eur": {
+        "60": 562.0,
+        "84": 431.7,
+        "120": 340.4
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p4-5kwplus13.5acc-mono",
+      "category": "Residenziale - Con accumulo (Tesla)",
+      "label": "5 kW + 13.5 acc",
+      "potenza_kw": 5.0,
+      "accumulo_kwh": 13.5,
+      "fase": "mono",
+      "prezzo_eur": 18900.0,
+      "rate_mensili_eur": {
+        "60": 387.9,
+        "84": 298.0,
+        "120": 235.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p4-6kwplus13.5acc-mono",
+      "category": "Residenziale - Con accumulo (Tesla)",
+      "label": "6 kW + 13.5 acc",
+      "potenza_kw": 6.0,
+      "accumulo_kwh": 13.5,
+      "fase": "mono",
+      "prezzo_eur": 19900.0,
+      "rate_mensili_eur": {
+        "60": 408.0,
+        "84": 313.6,
+        "120": 247.2
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p4-8kwplus13.5acc-mono",
+      "category": "Residenziale - Con accumulo (Tesla)",
+      "label": "8 kW + 13.5 acc",
+      "potenza_kw": 8.0,
+      "accumulo_kwh": 13.5,
+      "fase": "mono",
+      "prezzo_eur": 22000.0,
+      "rate_mensili_eur": {
+        "60": 450.7,
+        "84": 346.3,
+        "120": 273.0
+      },
+      "taeg_annuo_percent_by_term": {
+        "60": 7.95,
+        "84": 7.95,
+        "120": 8.25
+      }
+    },
+    {
+      "id": "p5-15kw-mono",
+      "category": "Aziende - Senza accumulo (Compass)",
+      "label": "15 kW",
+      "potenza_kw": 15.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 19900.0,
+      "rate_mensili_eur": {
+        "60": 430.0,
+        "84": 336.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p5-20kw-mono",
+      "category": "Aziende - Senza accumulo (Compass)",
+      "label": "20 kW",
+      "potenza_kw": 20.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 26000.0,
+      "rate_mensili_eur": {
+        "60": 562.0,
+        "84": 439.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p5-25kw-mono",
+      "category": "Aziende - Senza accumulo (Compass)",
+      "label": "25 kW",
+      "potenza_kw": 25.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 29500.0,
+      "rate_mensili_eur": {
+        "60": 638.0,
+        "84": 498.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p5-30kw-mono",
+      "category": "Aziende - Senza accumulo (Compass)",
+      "label": "30 kW",
+      "potenza_kw": 30.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 36900.0,
+      "rate_mensili_eur": {
+        "60": 795.0,
+        "84": 621.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p5-40kw-mono",
+      "category": "Aziende - Senza accumulo (Compass)",
+      "label": "40 kW",
+      "potenza_kw": 40.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 46900.0,
+      "rate_mensili_eur": {
+        "60": 1007.0,
+        "84": 786.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p6-8kwplus21acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Huawei)",
+      "label": "8 kW + 21 acc",
+      "potenza_kw": 8.0,
+      "accumulo_kwh": 21.0,
+      "fase": "tri",
+      "prezzo_eur": 24500.0,
+      "rate_mensili_eur": {
+        "60": 530.0,
+        "84": 414.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p6-10kwplus10acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Huawei)",
+      "label": "10 kW + 10 acc",
+      "potenza_kw": 10.0,
+      "accumulo_kwh": 10.0,
+      "fase": "tri",
+      "prezzo_eur": 21900.0,
+      "rate_mensili_eur": {
+        "60": 474.0,
+        "84": 370.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p6-10kwplus15acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Huawei)",
+      "label": "10 kW + 15 acc",
+      "potenza_kw": 10.0,
+      "accumulo_kwh": 15.0,
+      "fase": "tri",
+      "prezzo_eur": 25000.0,
+      "rate_mensili_eur": {
+        "60": 541.0,
+        "84": 422.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p6-10kwplus21acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Huawei)",
+      "label": "10 kW + 21 acc",
+      "potenza_kw": 10.0,
+      "accumulo_kwh": 21.0,
+      "fase": "tri",
+      "prezzo_eur": 29000.0,
+      "rate_mensili_eur": {
+        "60": 627.0,
+        "84": 490.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p6-15kwplus10acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Huawei)",
+      "label": "15 kW + 10 acc",
+      "potenza_kw": 15.0,
+      "accumulo_kwh": 10.0,
+      "fase": "tri",
+      "prezzo_eur": 26500.0,
+      "rate_mensili_eur": {
+        "60": 573.0,
+        "84": 447.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p6-15kwplus15acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Huawei)",
+      "label": "15 kW + 15 acc",
+      "potenza_kw": 15.0,
+      "accumulo_kwh": 15.0,
+      "fase": "tri",
+      "prezzo_eur": 30500.0,
+      "rate_mensili_eur": {
+        "60": 659.0,
+        "84": 514.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p6-15kwplus21acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Huawei)",
+      "label": "15 kW + 21 acc",
+      "potenza_kw": 15.0,
+      "accumulo_kwh": 21.0,
+      "fase": "tri",
+      "prezzo_eur": 33500.0,
+      "rate_mensili_eur": {
+        "60": 723.0,
+        "84": 564.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p6-20kwplus10acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Huawei)",
+      "label": "20 kW + 10 acc",
+      "potenza_kw": 20.0,
+      "accumulo_kwh": 10.0,
+      "fase": "tri",
+      "prezzo_eur": 29900.0,
+      "rate_mensili_eur": {
+        "60": 646.0,
+        "84": 505.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p6-20kwplus21acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Huawei)",
+      "label": "20 kW + 21 acc",
+      "potenza_kw": 20.0,
+      "accumulo_kwh": 21.0,
+      "fase": "tri",
+      "prezzo_eur": 36900.0,
+      "rate_mensili_eur": {
+        "60": 795.0,
+        "84": 621.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p7-15kwplus15acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Fox)",
+      "label": "15 kW + 15 acc",
+      "potenza_kw": 15.0,
+      "accumulo_kwh": 15.0,
+      "fase": "tri",
+      "prezzo_eur": 27500.0,
+      "rate_mensili_eur": {
+        "60": 595.0,
+        "84": 464.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p7-15kwplus22acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Fox)",
+      "label": "15 kW + 22 acc",
+      "potenza_kw": 15.0,
+      "accumulo_kwh": 22.0,
+      "fase": "tri",
+      "prezzo_eur": 30900.0,
+      "rate_mensili_eur": {
+        "60": 668.0,
+        "84": 521.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p7-20kwplus11acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Fox)",
+      "label": "20 kW + 11 acc",
+      "potenza_kw": 20.0,
+      "accumulo_kwh": 11.0,
+      "fase": "tri",
+      "prezzo_eur": 28900.0,
+      "rate_mensili_eur": {
+        "60": 625.0,
+        "84": 488.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p7-20kwplus22acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Fox)",
+      "label": "20 kW + 22 acc",
+      "potenza_kw": 20.0,
+      "accumulo_kwh": 22.0,
+      "fase": "tri",
+      "prezzo_eur": 34000.0,
+      "rate_mensili_eur": {
+        "60": 734.0,
+        "84": 573.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p7-30kwplus33acc-tri",
+      "category": "Aziende - Con accumulo (Compass - Fox)",
+      "label": "30 kW + 33 acc",
+      "potenza_kw": 30.0,
+      "accumulo_kwh": 33.0,
+      "fase": "tri",
+      "prezzo_eur": 46500.0,
+      "rate_mensili_eur": {
+        "60": 999.0,
+        "84": 780.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p8-10kw-mono",
+      "category": "Industriale - (I.E.)",
+      "label": "10 kW",
+      "potenza_kw": 10.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 14545.45,
+      "rate_mensili_eur": {
+        "60": 291.35,
+        "72": 252.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p8-20kw-mono",
+      "category": "Industriale - (I.E.)",
+      "label": "20 kW",
+      "potenza_kw": 20.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 23636.36,
+      "rate_mensili_eur": {
+        "60": 466.35,
+        "72": 402.29
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p8-30kw-mono",
+      "category": "Industriale - (I.E.)",
+      "label": "30 kW",
+      "potenza_kw": 30.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 35364.0,
+      "rate_mensili_eur": {
+        "60": 697.73,
+        "72": 601.9
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p8-40kw-mono",
+      "category": "Industriale - (I.E.)",
+      "label": "40 kW",
+      "potenza_kw": 40.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 44455.0,
+      "rate_mensili_eur": {
+        "60": 868.21,
+        "72": 748.18
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p8-50kw-mono",
+      "category": "Industriale - (I.E.)",
+      "label": "50 kW",
+      "potenza_kw": 50.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 54546.0,
+      "rate_mensili_eur": {
+        "60": 1065.28,
+        "72": 918.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p8-60kw-mono",
+      "category": "Industriale - (I.E.)",
+      "label": "60 kW",
+      "potenza_kw": 60.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 68182.0,
+      "rate_mensili_eur": {
+        "60": 1331.59,
+        "72": 1147.5
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p8-70kw-mono",
+      "category": "Industriale - (I.E.)",
+      "label": "70 kW",
+      "potenza_kw": 70.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 77273.0,
+      "rate_mensili_eur": {
+        "60": 1509.14,
+        "72": 1300.5
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p8-80kw-mono",
+      "category": "Industriale - (I.E.)",
+      "label": "80 kW",
+      "potenza_kw": 80.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 87273.0,
+      "rate_mensili_eur": {
+        "60": 1687.0,
+        "72": 1451.35
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p8-90kw-mono",
+      "category": "Industriale - (I.E.)",
+      "label": "90 kW",
+      "potenza_kw": 90.0,
+      "accumulo_kwh": 0.0,
+      "fase": "mono",
+      "prezzo_eur": 95455.0,
+      "rate_mensili_eur": {
+        "60": 1845.15,
+        "72": 1587.42
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p9-20kwplus22acc-tri",
+      "category": "Industriale - Con accumulo (I.E.)",
+      "label": "20 kW + 22 acc",
+      "potenza_kw": 20.0,
+      "accumulo_kwh": 22.0,
+      "fase": "tri",
+      "prezzo_eur": 30909.1,
+      "rate_mensili_eur": {
+        "60": 609.84,
+        "72": 526.0
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p9-30kwplus33acc-tri",
+      "category": "Industriale - Con accumulo (I.E.)",
+      "label": "30 kW + 33 acc",
+      "potenza_kw": 30.0,
+      "accumulo_kwh": 33.0,
+      "fase": "tri",
+      "prezzo_eur": 42273.0,
+      "rate_mensili_eur": {
+        "60": 825.59,
+        "72": 711.45
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p9-40kwplus44acc-tri",
+      "category": "Industriale - Con accumulo (I.E.)",
+      "label": "40 kW + 44 acc",
+      "potenza_kw": 40.0,
+      "accumulo_kwh": 44.0,
+      "fase": "tri",
+      "prezzo_eur": 57728.0,
+      "rate_mensili_eur": {
+        "60": 1127.43,
+        "72": 971.56
+      },
+      "taeg_annuo_percent_by_term": {}
+    },
+    {
+      "id": "p9-50kwplus55acc-tri",
+      "category": "Industriale - Con accumulo (I.E.)",
+      "label": "50 kW + 55 acc",
+      "potenza_kw": 50.0,
+      "accumulo_kwh": 55.0,
+      "fase": "tri",
+      "prezzo_eur": 86273.0,
+      "rate_mensili_eur": {
+        "60": 1667.66,
+        "72": 1434.72
+      },
+      "taeg_annuo_percent_by_term": {}
+    }
+  ]
+}

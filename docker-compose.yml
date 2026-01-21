@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pv-calculator-backend
+    restart: unless-stopped
+    volumes:
+      # Persist datasheets uploads
+      - ./data/datasheets:/app/datasheets
+      # Catalog file (shared with frontend build)
+      - ./data/catalog.json:/app/data/catalog.json
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATASHEETS_DIR=/app/datasheets
+      - CATALOG_PATH=/app/data/catalog.json
+    networks:
+      - pv-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pv-calculator-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - pv-network
+
+networks:
+  pv-network:
+    driver: bridge

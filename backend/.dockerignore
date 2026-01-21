@@ -1,0 +1,17 @@
+# Docker files
+Dockerfile
+.dockerignore
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+
+# Virtual env
+.venv
+venv
+
+# IDE
+.vscode
+.idea

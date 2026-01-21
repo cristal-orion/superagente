@@ -1,0 +1,9 @@
+# Docker files
+Dockerfile
+.dockerignore
+
+# Backup files
+*.backup
+
+# Nginx config (copied separately)
+nginx.conf

@@ -17,13 +17,13 @@ from .models import CalcRequest, CalcResponse
 
 app = FastAPI(title="PV Sales Calculator")
 
-# Datasheets configuration
-DATASHEETS_DIR = Path(__file__).parent / "datasheets"
+# Datasheets configuration (use env var for Docker, fallback for local dev)
+DATASHEETS_DIR = Path(os.environ.get("DATASHEETS_DIR", Path(__file__).parent / "datasheets"))
 VALID_CATEGORIES = ["pannelli", "inverter", "batterie", "pompe", "altro"]
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
-# Catalog configuration
-CATALOG_PATH = Path(__file__).parent.parent / "frontend" / "catalog.json"
+# Catalog configuration (use env var for Docker, fallback for local dev)
+CATALOG_PATH = Path(os.environ.get("CATALOG_PATH", Path(__file__).parent.parent / "frontend" / "catalog.json"))
 RATE_TERMS = ["60", "72", "84", "120"]  # Possible financing terms in months
 
 # Ensure datasheets directories exist
