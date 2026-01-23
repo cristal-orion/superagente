@@ -401,16 +401,20 @@ function renderDatasheetSelector(containerId) {
     hasAny = true;
 
     const catInfo = datasheetConfig.categoryLabels[cat];
-    html += `<div class="selector-category">
-      <div class="selector-category-label">
-        <span>${catInfo.icon}</span>
-        <span>${catInfo.label}</span>
+    html += `<div class="selector-category" data-category="${cat}">
+      <div class="selector-category-header" onclick="toggleDatasheetCategory(this)">
+        <div class="selector-category-label">
+          <span class="category-icon">${catInfo.icon}</span>
+          <span class="category-name">${catInfo.label}</span>
+          <span class="category-count" data-cat="${cat}">0/${items.length}</span>
+        </div>
+        <span class="category-toggle">▼</span>
       </div>
-      <div class="selector-items">`;
+      <div class="selector-items collapsed">`;
 
     for (const item of items) {
       html += `<label class="selector-item">
-        <input type="checkbox" value="${item.url}" data-name="${item.name}" />
+        <input type="checkbox" value="${item.url}" data-name="${item.name}" data-cat="${cat}" onchange="updateDatasheetCount('${containerId}', '${cat}')" />
         <span class="selector-item-label">${item.name}</span>
       </label>`;
     }
@@ -423,6 +427,32 @@ function renderDatasheetSelector(containerId) {
   }
 
   container.innerHTML = html;
+}
+
+// Toggle category expansion
+function toggleDatasheetCategory(headerEl) {
+  const category = headerEl.closest('.selector-category');
+  const items = category.querySelector('.selector-items');
+  const toggle = headerEl.querySelector('.category-toggle');
+
+  items.classList.toggle('collapsed');
+  toggle.classList.toggle('expanded');
+}
+
+// Update selected count for a category
+function updateDatasheetCount(containerId, cat) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const checkboxes = container.querySelectorAll(`input[data-cat="${cat}"]`);
+  const checked = container.querySelectorAll(`input[data-cat="${cat}"]:checked`).length;
+  const total = checkboxes.length;
+
+  const countEl = container.querySelector(`.category-count[data-cat="${cat}"]`);
+  if (countEl) {
+    countEl.textContent = `${checked}/${total}`;
+    countEl.classList.toggle('has-selection', checked > 0);
+  }
 }
 
 // ─── Get Selected Datasheets from Selector ──────────────────────────────────
@@ -1488,6 +1518,7 @@ async function generateManualQuote() {
     return;
   }
 
+  const clienteTitle = document.querySelector('input[name="clientTitle"]:checked')?.value || "sig";
   const clienteName = document.getElementById("manualClienteName").value.trim() || "Cliente";
   const clienteIndirizzo = document.getElementById("manualClienteIndirizzo").value.trim();
   const clienteNote = document.getElementById("manualClienteNote").value.trim();
@@ -1508,7 +1539,7 @@ async function generateManualQuote() {
     await initPdfAssets();
   }
 
-  await generateManualPDF(clienteName, clienteIndirizzo, clienteNote, selectedManualSystems, paymentType, anniFinanziamento, taegPercent, customTotalPrice, ivaType, includeSavings, lastResponse);
+  await generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, clienteNote, selectedManualSystems, paymentType, anniFinanziamento, taegPercent, customTotalPrice, ivaType, includeSavings, lastResponse);
 
   // Close modal after generating
   const modal = document.getElementById("manualQuoteModal");
@@ -1516,7 +1547,7 @@ async function generateManualQuote() {
 }
 
 // ─── Generate Manual PDF ────────────────────────────────────────────────────
-async function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, systems, paymentType, anniFinanziamento, taegPercent = 0, customTotalPrice = 0, ivaType = "inclusa", includeSavings = false, savingsData = null) {
+async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, clienteNote, systems, paymentType, anniFinanziamento, taegPercent = 0, customTotalPrice = 0, ivaType = "inclusa", includeSavings = false, savingsData = null) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({
     orientation: "portrait",
@@ -1550,10 +1581,28 @@ async function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, sys
     }
   }
 
+  // Build greeting based on title
+  let greeting;
+  switch (clienteTitle) {
+    case "sigra":
+      greeting = "Gentile Sig.ra " + clienteName;
+      break;
+    case "spett":
+      greeting = "Spettabile " + clienteName;
+      break;
+    case "sig":
+    default:
+      greeting = "Egregio Sig. " + clienteName;
+      break;
+  }
+
   // Calculate totals
   // Use custom total price if provided, otherwise sum from systems
   const systemsTotal = systems.reduce((sum, s) => sum + Number(s.prezzo_eur), 0);
   const totalPriceBase = customTotalPrice > 0 ? customTotalPrice : systemsTotal;
+
+  // Calculate price ratio for proportional pricing when custom price is set
+  const priceRatio = customTotalPrice > 0 && systemsTotal > 0 ? customTotalPrice / systemsTotal : 1;
 
   // IVA calculation: catalog prices are IVA inclusa (10%)
   // If user selects "esclusa", we show the price without IVA
@@ -1581,7 +1630,7 @@ async function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, sys
   // Client name on the white line at bottom
   setFont("normal", 12);
   doc.setTextColor(59, 82, 128);
-  doc.text("Egregio Sig. " + clienteName, 27, 287);
+  doc.text(greeting, 27, 287);
 
   // ═══════════════════════════════════════════════════════════════════════
   // PAGE 2: Company Info & Guarantees
@@ -1744,8 +1793,10 @@ async function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, sys
     doc.text(sysLines, margin + colWidth1 + 12, y + (sysLines.length > 1 ? 9 : 14));
 
     setFont("bold", 14);
-    doc.setTextColor(196, 30, 58);
-    doc.text(euro(sys.prezzo_eur), pageWidth - margin - 18, y + 14, { align: "right" });
+    doc.setTextColor(39, 174, 96); // Green
+    // Use proportional price when custom price is set
+    const displayPrice = Math.round(Number(sys.prezzo_eur) * priceRatio);
+    doc.text(euro(displayPrice), pageWidth - margin - 18, y + 14, { align: "right" });
 
     y += rowHeight + 6;
   });
@@ -1795,11 +1846,8 @@ async function generateManualPDF(clienteName, clienteIndirizzo, clienteNote, sys
     doc.text(euro(totalPrice) + " " + ivaLabel, margin + 18, y + 16);
 
     setFont("bold", 18);
-    doc.setTextColor(196, 30, 58);
-    const rataText = taegPercent > 0
-      ? euroMonthly(rataMensile) + " (TAEG " + taegPercent + "%)"
-      : euroMonthly(rataMensile);
-    doc.text(rataText, pageWidth - margin - 18, y + 16, { align: "right" });
+    doc.setTextColor(39, 174, 96); // Green
+    doc.text(euroMonthly(rataMensile), pageWidth - margin - 18, y + 16, { align: "right" });
 
     y += 35;
 
@@ -2525,7 +2573,7 @@ async function generatePDF(clienteName, clienteIndirizzo, clienteNote, data) {
   doc.text(sysLines, margin + colWidth1 + 12, y + 10);
 
   setFont("bold", 16);
-  doc.setTextColor(196, 30, 58);
+  doc.setTextColor(39, 174, 96); // Green
   doc.text(euro(costoImpianto), pageWidth - margin - 18, y + 14, { align: "right" });
 
   y += rowHeight + 8;
@@ -2584,8 +2632,8 @@ async function generatePDF(clienteName, clienteIndirizzo, clienteNote, data) {
   const taegPercent = selectedOffer?.taeg_annuo_percent_by_term?.[String(selectedTermMonths)] || "";
 
   setFont("bold", 18);
-  doc.setTextColor(196, 30, 58);
-  doc.text(euroMonthly(rataMensile) + (taegPercent ? " (TAEG " + taegPercent + "%)" : ""), pageWidth - margin - 18, y + 16, { align: "right" });
+  doc.setTextColor(39, 174, 96); // Green
+  doc.text(euroMonthly(rataMensile), pageWidth - margin - 18, y + 16, { align: "right" });
 
   y += 35;
 

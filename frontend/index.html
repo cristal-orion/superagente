@@ -465,8 +465,25 @@
                 <span class="field-hint">Aggiunge al preventivo le pagine con il calcolo del risparmio basato sulla bolletta attuale</span>
               </div>
               <div class="field">
+                <label>Titolo</label>
+                <div class="title-selector">
+                  <label class="radio-option">
+                    <input type="radio" name="clientTitle" value="sig" checked />
+                    <span class="radio-label">Sig.</span>
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="clientTitle" value="sigra" />
+                    <span class="radio-label">Sig.ra</span>
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="clientTitle" value="spett" />
+                    <span class="radio-label">Spett.</span>
+                  </label>
+                </div>
+              </div>
+              <div class="field">
                 <label for="manualClienteName">Nome Cliente</label>
-                <input type="text" id="manualClienteName" placeholder="Es. Sig. Rossi" autocomplete="off" />
+                <input type="text" id="manualClienteName" placeholder="Es. Rossi" autocomplete="off" />
               </div>
               <div class="field">
                 <label for="manualClienteIndirizzo">Indirizzo (opzionale)</label>
