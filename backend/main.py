@@ -12,8 +12,8 @@ from fastapi.staticfiles import StaticFiles
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
-from .calculator import calc_response
-from .models import CalcRequest, CalcResponse
+from calculator import calc_response
+from models import CalcRequest, CalcResponse
 
 app = FastAPI(title="PV Sales Calculator")
 

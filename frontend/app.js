@@ -2182,9 +2182,9 @@ async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, cl
 
   setFont("normal", 12);
   doc.setTextColor(60, 60, 60);
-  doc.text("Tel: 800 123 456 (numero verde)", margin + 18, y + 32);
-  doc.text("Email: info@techsolutions.it", margin + 18, y + 42);
-  doc.text("Web: www.techsolutions.it", margin + 18, y + 52);
+  doc.text("Tel: 379 113 7065", margin + 18, y + 32);
+  doc.text("Email: info@gruppotech.it", margin + 18, y + 42);
+  doc.text("Web: techsolutionssrl.com", margin + 18, y + 52);
 
   y += 70;
 
@@ -2948,9 +2948,9 @@ async function generatePDF(clienteName, clienteIndirizzo, clienteNote, data) {
 
   setFont("normal", 12);
   doc.setTextColor(60, 60, 60);
-  doc.text("Tel: 800 123 456 (numero verde)", margin + 18, y + 32);
-  doc.text("Email: info@techsolutions.it", margin + 18, y + 42);
-  doc.text("Web: www.techsolutions.it", margin + 18, y + 52);
+  doc.text("Tel: 379 113 7065", margin + 18, y + 32);
+  doc.text("Email: info@gruppotech.it", margin + 18, y + 42);
+  doc.text("Web: techsolutionssrl.com", margin + 18, y + 52);
 
   y += 70;
 

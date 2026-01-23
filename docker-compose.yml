@@ -18,6 +18,7 @@ services:
       - CATALOG_PATH=/app/data/catalog.json
     networks:
       - pv-network
+      - reminor-network
 
   frontend:
     build:
@@ -26,12 +27,15 @@ services:
     container_name: pv-calculator-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8081:80"
     depends_on:
       - backend
     networks:
       - pv-network
+      - reminor-network
 
 networks:
   pv-network:
     driver: bridge
+  reminor-network:
+    external: true

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .models import CalcRequest, CalcResponse, CashflowYear
+from models import CalcRequest, CalcResponse, CashflowYear
 
 
 def calc_spesa_annua_attuale(consumo: float, prezzo: float) -> float:

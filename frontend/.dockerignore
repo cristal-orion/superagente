@@ -4,6 +4,3 @@ Dockerfile
 
 # Backup files
 *.backup
-
-# Nginx config (copied separately)
-nginx.conf
