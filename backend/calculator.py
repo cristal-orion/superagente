@@ -29,9 +29,9 @@ def calc_detrazione_annua(costo: float, aliquota_percent: float, anni_detrazione
     return (costo * (aliquota_percent / 100.0)) / anni_detrazione
 
 
-def calc_autoconsumo(produzione: float, autoconsumo_percent: float) -> tuple[float, float]:
+def calc_autoconsumo(produzione: float, autoconsumo_percent: float, consumo_annuo: float) -> tuple[float, float]:
     kwh_autoconsumati = produzione * (autoconsumo_percent / 100.0)
-    kwh_autoconsumati = min(max(kwh_autoconsumati, 0.0), produzione)
+    kwh_autoconsumati = min(max(kwh_autoconsumati, 0.0), produzione, consumo_annuo)
     kwh_immessi = max(produzione - kwh_autoconsumati, 0.0)
     return kwh_autoconsumati, kwh_immessi
 
@@ -68,7 +68,9 @@ def calc_response(request: CalcRequest) -> CalcResponse:
         request.costo_impianto_eur, request.aliquota_detrazione_percent, request.anni_detrazione
     )
 
-    kwh_autoconsumati, kwh_immessi = calc_autoconsumo(request.produzione_annua_kwh, request.autoconsumo_percent)
+    kwh_autoconsumati, kwh_immessi = calc_autoconsumo(
+        request.produzione_annua_kwh, request.autoconsumo_percent, request.consumo_annuo_kwh
+    )
 
     risparmio = kwh_autoconsumati * request.prezzo_energia_eur_kwh
     ricavo_gse = calc_gse(kwh_immessi, request.prezzo_gse_eur_kwh)
@@ -79,17 +81,23 @@ def calc_response(request: CalcRequest) -> CalcResponse:
     costo_netto = rata_annua - detrazione_annua - risparmio - ricavo_gse
     delta = costo_netto - spesa_attuale
 
-    if delta <= 0:
-        messaggio = "Paghi uguale o meno già da subito (stimato)."
+    # New correct formula
+    bolletta_residua = (request.consumo_annuo_kwh - kwh_autoconsumati) * request.prezzo_energia_eur_kwh
+    spesa_nuova = bolletta_residua + rata_annua - detrazione_annua - ricavo_gse
+    risparmio_netto = spesa_attuale - spesa_nuova  # = risparmio + detrazione + ricavo_gse - rata
+
+    if risparmio_netto >= 0:
+        messaggio = f"Risparmi circa {risparmio_netto:.0f}€ all'anno (stimato)."
     else:
-        messaggio = f"Paghi circa {delta:.0f}€ in più all'anno (stimato)."
+        messaggio = f"Paghi circa {abs(risparmio_netto):.0f}€ in più all'anno (stimato)."
 
     cashflow_anni: list[CashflowYear] = []
     for anno in range(1, 26):
         rata = rata_annua if anno <= request.anni_finanziamento else 0.0
         detrazione = detrazione_annua if anno <= request.anni_detrazione else 0.0
         costo = rata - detrazione - risparmio - ricavo_gse
-        cashflow_anni.append(CashflowYear(anno=anno, costo_netto_eur=costo))
+        rn = risparmio + detrazione + ricavo_gse - rata
+        cashflow_anni.append(CashflowYear(anno=anno, costo_netto_eur=costo, risparmio_netto_eur=rn))
 
     return CalcResponse(
         spesa_annua_attuale_eur=spesa_attuale,
@@ -101,6 +109,9 @@ def calc_response(request: CalcRequest) -> CalcResponse:
         ricavo_gse_eur=ricavo_gse,
         costo_netto_annuo_eur=costo_netto,
         delta_vs_spesa_attuale_eur=delta,
+        bolletta_residua_eur=bolletta_residua,
+        risparmio_netto_eur=risparmio_netto,
+        spesa_nuova_totale_eur=spesa_nuova,
         messaggio=messaggio,
         cashflow_anni=cashflow_anni,
     )

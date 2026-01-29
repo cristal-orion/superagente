@@ -37,9 +37,9 @@ const Calculator = {
   },
 
   // Autoconsumo: quanta energia si usa vs immette in rete
-  calcAutoconsumo(produzione, autoconsumoPercent) {
+  calcAutoconsumo(produzione, autoconsumoPercent, consumoAnnuo) {
     let kwhAutoconsumati = produzione * (autoconsumoPercent / 100.0);
-    kwhAutoconsumati = Math.min(Math.max(kwhAutoconsumati, 0.0), produzione);
+    kwhAutoconsumati = Math.min(Math.max(kwhAutoconsumati, 0.0), produzione, consumoAnnuo);
     const kwhImmessi = Math.max(produzione - kwhAutoconsumati, 0.0);
     return { kwhAutoconsumati, kwhImmessi };
   },
@@ -84,7 +84,8 @@ const Calculator = {
 
     const { kwhAutoconsumati, kwhImmessi } = this.calcAutoconsumo(
       request.produzione_annua_kwh,
-      request.autoconsumo_percent
+      request.autoconsumo_percent,
+      request.consumo_annuo_kwh
     );
 
     let risparmio = kwhAutoconsumati * request.prezzo_energia_eur_kwh;
@@ -97,11 +98,16 @@ const Calculator = {
     const costoNetto = rataAnnua - detrazioneAnnua - risparmio - ricavoGse;
     const delta = costoNetto - spesaAttuale;
 
+    // New correct formula
+    const bollettaResidua = (request.consumo_annuo_kwh - kwhAutoconsumati) * request.prezzo_energia_eur_kwh;
+    const spesaNuova = bollettaResidua + rataAnnua - detrazioneAnnua - ricavoGse;
+    const risparmioNetto = spesaAttuale - spesaNuova;
+
     let messaggio;
-    if (delta <= 0) {
-      messaggio = "Paghi uguale o meno già da subito (stimato).";
+    if (risparmioNetto >= 0) {
+      messaggio = `Risparmi circa ${Math.round(risparmioNetto)}€ all'anno (stimato).`;
     } else {
-      messaggio = `Paghi circa ${Math.round(delta)}€ in più all'anno (stimato).`;
+      messaggio = `Paghi circa ${Math.round(Math.abs(risparmioNetto))}€ in più all'anno (stimato).`;
     }
 
     // Genera cashflow 25 anni
@@ -110,7 +116,8 @@ const Calculator = {
       const rata = anno <= request.anni_finanziamento ? rataAnnua : 0.0;
       const detrazione = anno <= request.anni_detrazione ? detrazioneAnnua : 0.0;
       const costo = rata - detrazione - risparmio - ricavoGse;
-      cashflowAnni.push({ anno, costo_netto_eur: costo });
+      const rn = risparmio + detrazione + ricavoGse - rata;
+      cashflowAnni.push({ anno, costo_netto_eur: costo, risparmio_netto_eur: rn });
     }
 
     return {
@@ -123,6 +130,9 @@ const Calculator = {
       ricavo_gse_eur: ricavoGse,
       costo_netto_annuo_eur: costoNetto,
       delta_vs_spesa_attuale_eur: delta,
+      bolletta_residua_eur: bollettaResidua,
+      risparmio_netto_eur: risparmioNetto,
+      spesa_nuova_totale_eur: spesaNuova,
       messaggio,
       cashflow_anni: cashflowAnni
     };
@@ -230,6 +240,7 @@ let catalog = null;
 let selectedOffer = null;
 let selectedTermMonths = null;
 let lastResponse = null;
+let clientType = 'residenziale'; // 'residenziale' or 'aziendale'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Datasheet Module - Backend-based PDF Management with Drag & Drop
@@ -763,7 +774,72 @@ function groupByCategory(items) {
   return map;
 }
 
-function populateModels() {
+// ─── Client Type Logic ────────────────────────────────────────────────────
+function filterCatalogItems(type) {
+  return (catalog || []).filter(item => {
+    const cat = (item.category || '').toLowerCase();
+    if (type === 'aziendale') {
+      return cat.includes('aziend') || cat.includes('industrial');
+    }
+    return cat.includes('residenzial');
+  });
+}
+
+function onClientTypeChange(newType) {
+  clientType = newType;
+  const isAziendale = (newType === 'aziendale');
+
+  // Toggle deduction fields
+  const detrazioneInput = document.getElementById('aliquota_detrazione_percent');
+  const anniDetrazioneInput = document.getElementById('anni_detrazione');
+
+  if (isAziendale) {
+    detrazioneInput.dataset.prevValue = detrazioneInput.value;
+    anniDetrazioneInput.dataset.prevValue = anniDetrazioneInput.value;
+    detrazioneInput.value = '0';
+    detrazioneInput.disabled = true;
+    anniDetrazioneInput.disabled = true;
+  } else {
+    detrazioneInput.value = detrazioneInput.dataset.prevValue || '50';
+    anniDetrazioneInput.value = anniDetrazioneInput.dataset.prevValue || '10';
+    detrazioneInput.disabled = false;
+    anniDetrazioneInput.disabled = false;
+  }
+
+  // Dim deduction fields visually
+  const detrazioneField = detrazioneInput.closest('.field');
+  const anniField = anniDetrazioneInput.closest('.field');
+  if (detrazioneField) detrazioneField.classList.toggle('deduction-fields-hidden', isAziendale);
+  if (anniField) anniField.classList.toggle('deduction-fields-hidden', isAziendale);
+
+  // Toggle aziendale-only fields (description + potenza manuale)
+  document.querySelectorAll('.aziendale-only').forEach(el => {
+    el.style.display = isAziendale ? '' : 'none';
+  });
+
+  // Update stat card visibility
+  const detrazioneCard = document.getElementById('detrazione')?.closest('.stat-card');
+  if (detrazioneCard) detrazioneCard.classList.toggle('stat-card-hidden', isAziendale);
+
+  // Re-populate catalog dropdown with filtered items
+  populateModelsFiltered();
+
+  // Reset selection
+  selectedOffer = null;
+  selectedTermMonths = null;
+  populateTerms(null);
+
+  // Re-initialize manual quote modal with filtered catalog
+  selectedManualSystems = [];
+  if (catalog && catalog.length > 0) {
+    const container = document.getElementById("manualSystemsContainer");
+    if (container) initManualQuote();
+  }
+
+  debounceRecalc();
+}
+
+function populateModelsFiltered() {
   const sel = document.getElementById("modello_impianto");
   sel.innerHTML = "";
 
@@ -772,7 +848,8 @@ function populateModels() {
   opt0.textContent = "Seleziona…";
   sel.appendChild(opt0);
 
-  const grouped = groupByCategory(catalog || []);
+  const filtered = filterCatalogItems(clientType);
+  const grouped = groupByCategory(filtered);
   for (const [cat, items] of grouped.entries()) {
     const grp = document.createElement("optgroup");
     grp.label = cat;
@@ -784,7 +861,12 @@ function populateModels() {
     }
     sel.appendChild(grp);
   }
+}
 
+function populateModels() {
+  populateModelsFiltered();
+
+  const sel = document.getElementById("modello_impianto");
   sel.addEventListener("change", () => {
     const id = sel.value;
     selectedOffer = (catalog || []).find((x) => x.id === id) || null;
@@ -850,6 +932,11 @@ function applySelectedOffer() {
     setChecked("usa_rata_semplice", false);
     setValue("taeg_annuo_percent", taeg);
   }
+
+  // Auto-set autoconsumo to 80% when system has battery storage
+  if (selectedOffer.accumulo_kwh && selectedOffer.accumulo_kwh > 0) {
+    setValue("autoconsumo_percent", 80);
+  }
 }
 
 function financedAmount() {
@@ -907,7 +994,7 @@ function buildPayload() {
 
     prezzo_gse_eur_kwh: numberValue("prezzo_gse_eur_kwh"),
 
-    aliquota_detrazione_percent: numberValue("aliquota_detrazione_percent"),
+    aliquota_detrazione_percent: clientType === 'aziendale' ? 0 : numberValue("aliquota_detrazione_percent"),
     anni_detrazione: Math.trunc(numberValue("anni_detrazione")),
 
     fattore_prudenza: numberValue("fattore_prudenza"),
@@ -918,38 +1005,142 @@ function buildPayload() {
 function render(response) {
   lastResponse = response;
 
-  // Hero values
-  const delta = response.delta_vs_spesa_attuale_eur;
-  const heroValue = document.getElementById("delta");
-  const heroNumber = heroValue.querySelector(".hero-number");
-  const heroMessage = document.getElementById("messaggio");
+  // Extract response values
+  const spesaAttuale = response.spesa_annua_attuale_eur;
+  const spesaNuova = response.spesa_nuova_totale_eur;
+  const risparmioNetto = response.risparmio_netto_eur;
+  const risparmio = response.risparmio_bolletta_eur;
+  const gse = response.ricavo_gse_eur;
+  const rata = response.rata_annua_impianto_eur;
+  const detrazione = response.detrazione_annua_eur;
 
-  heroNumber.textContent = euroNumber(Math.abs(delta));
+  // Calculate percentage savings
+  const percentSaved = spesaAttuale > 0 ? Math.round((Math.abs(risparmioNetto) / spesaAttuale) * 100) : 0;
 
-  if (delta <= 0) {
-    heroValue.classList.remove("negative");
-    heroMessage.classList.remove("negative");
-  } else {
-    heroValue.classList.add("negative");
-    heroMessage.classList.add("negative");
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Section 1: Comparison Cards
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Card PRIMA (today)
+  document.getElementById("spesaTotaleAnno").textContent = euroNumber(spesaAttuale);
+  document.getElementById("bollettaMensile").textContent = euro(spesaAttuale / 12);
+  document.getElementById("emissioneCO2").textContent = ((spesaAttuale / 0.30) * 0.000233).toFixed(1) + " T";
+
+  // Card DOPO (with solar)
+  document.getElementById("nuovaSpesaAnno").textContent = euroNumber(Math.max(0, spesaNuova));
+  document.getElementById("savingsPercent").textContent = "-" + percentSaved + "%";
+
+  // Stacked bar segments
+  const totalFlows = risparmio + gse + detrazione + rata;
+  if (totalFlows > 0) {
+    document.getElementById("segmentRisparmio").style.width = (risparmio / totalFlows * 100) + "%";
+    document.getElementById("segmentGse").style.width = (gse / totalFlows * 100) + "%";
+    document.getElementById("segmentDetrazione").style.width = (detrazione / totalFlows * 100) + "%";
+    document.getElementById("segmentRata").style.width = (rata / totalFlows * 100) + "%";
   }
 
-  heroMessage.textContent = response.messaggio;
+  // Breakdown list
+  document.getElementById("risparmioReale").textContent = "+ " + euro(risparmio);
+  document.getElementById("guadagnoGSE").textContent = "+ " + euro(gse);
+  document.getElementById("detrazioneFiscale").textContent = "+ " + euro(detrazione);
+  document.getElementById("rataPrestito").textContent = "- " + euro(rata);
 
-  // Comparison values
-  document.getElementById("spesa_attuale").textContent = euro(response.spesa_annua_attuale_eur);
-  document.getElementById("costo_netto").textContent = euro(response.costo_netto_annuo_eur);
+  // Show/hide detrazione row and segment based on value
+  const detrazioneRow = document.getElementById("detrazioneRow");
+  const segmentDetrazione = document.getElementById("segmentDetrazione");
+  if (detrazioneRow) {
+    detrazioneRow.style.display = detrazione > 0 ? "flex" : "none";
+  }
+  if (segmentDetrazione) {
+    segmentDetrazione.style.display = detrazione > 0 ? "block" : "none";
+  }
 
-  // Stats cards
-  document.getElementById("rata").textContent = euro(response.rata_annua_impianto_eur);
-  document.getElementById("detrazione").textContent = euro(response.detrazione_annua_eur);
-  document.getElementById("risparmio").textContent = euro(response.risparmio_bolletta_eur);
-  document.getElementById("ricavo_gse").textContent = euro(response.ricavo_gse_eur);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Section 2: Status Bar
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  // Anno 11 badge
-  const year11 = response.cashflow_anni.find((x) => x.anno === 11);
-  const anno11El = document.getElementById("anno11");
-  anno11El.textContent = year11 ? euro(year11.costo_netto_eur) : "—";
+  const statusValue = document.getElementById("statusValue");
+  const statusCursor = document.getElementById("statusCursor");
+  const guadagnoAnnuale = document.getElementById("guadagnoAnnuale");
+
+  if (risparmioNetto >= 0) {
+    statusValue.textContent = "IN ATTIVO";
+    statusValue.classList.remove("negative");
+    guadagnoAnnuale.textContent = "+ " + euro(risparmioNetto);
+    guadagnoAnnuale.classList.remove("negative");
+    // Position cursor in positive zone (50-100%)
+    const cursorPos = 50 + Math.min(50, (risparmioNetto / 1000) * 10);
+    statusCursor.style.left = cursorPos + "%";
+    statusCursor.style.background = "#10b981";
+  } else {
+    statusValue.textContent = "IN PASSIVO";
+    statusValue.classList.add("negative");
+    guadagnoAnnuale.textContent = "- " + euro(Math.abs(risparmioNetto));
+    guadagnoAnnuale.classList.add("negative");
+    // Position cursor in negative zone (0-50%)
+    const cursorPos = 50 - Math.min(50, (Math.abs(risparmioNetto) / 1000) * 10);
+    statusCursor.style.left = cursorPos + "%";
+    statusCursor.style.background = "#ef4444";
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Section 3: Waterfall Chart
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const maxWaterfall = Math.max(spesaAttuale, rata, risparmio, gse, detrazione, Math.abs(spesaNuova));
+
+  document.getElementById("wfBolletta").style.width = Math.max(20, (spesaAttuale / maxWaterfall * 100)) + "%";
+  document.getElementById("wfBollettaVal").textContent = euro(spesaAttuale);
+
+  document.getElementById("wfRisparmio").style.width = Math.max(20, (risparmio / maxWaterfall * 100)) + "%";
+  document.getElementById("wfRisparmioVal").textContent = "- " + euro(risparmio);
+
+  document.getElementById("wfGSE").style.width = Math.max(20, (gse / maxWaterfall * 100)) + "%";
+  document.getElementById("wfGSEVal").textContent = "- " + euro(gse);
+
+  // Detrazione row - show/hide based on value
+  const wfDetrazioneRow = document.getElementById("wfDetrazioneRow");
+  const wfDetrazione = document.getElementById("wfDetrazione");
+  const wfDetrazioneVal = document.getElementById("wfDetrazioneVal");
+  if (wfDetrazioneRow) {
+    wfDetrazioneRow.style.display = detrazione > 0 ? "flex" : "none";
+  }
+  if (wfDetrazione) {
+    wfDetrazione.style.width = Math.max(20, (detrazione / maxWaterfall * 100)) + "%";
+  }
+  if (wfDetrazioneVal) {
+    wfDetrazioneVal.textContent = "- " + euro(detrazione);
+  }
+
+  document.getElementById("wfRata").style.width = Math.max(20, (rata / maxWaterfall * 100)) + "%";
+  document.getElementById("wfRataVal").textContent = "+ " + euro(rata);
+
+  document.getElementById("wfNuova").style.width = Math.max(20, (Math.max(0, spesaNuova) / maxWaterfall * 100)) + "%";
+  document.getElementById("wfNuovaVal").textContent = euro(Math.max(0, spesaNuova));
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Section 3: Investment Return Summary
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Calculate breakeven year
+  let cumulative = 0;
+  let breakevenYear = 25;
+  for (const year of response.cashflow_anni) {
+    cumulative += year.risparmio_netto_eur;
+    if (cumulative > 0 && breakevenYear === 25) {
+      breakevenYear = year.anno;
+    }
+  }
+  document.getElementById("breakevenYear").textContent = "ANNO " + breakevenYear;
+
+  // Calculate 25-year totals
+  const total25 = response.cashflow_anni.reduce((sum, y) => sum + y.risparmio_netto_eur, 0);
+  document.getElementById("guadagno25Anni").textContent = (total25 >= 0 ? "+ " : "- ") + euro(Math.abs(total25));
+
+  // Calculate average annual return (rough estimate)
+  const costoImpianto = parseFloat(document.getElementById("costo_impianto_eur").value) || 12000;
+  const rendimento = costoImpianto > 0 ? ((total25 / costoImpianto) / 25 * 100).toFixed(1) : 0;
+  document.getElementById("rendimentoAnnuo").textContent = rendimento + "%";
 
   // Detailed table
   renderCashflowTable(response);
@@ -957,9 +1148,12 @@ function render(response) {
   // Charts
   drawCharts(response);
 
-  // Animation
-  heroValue.classList.add("value-updated");
-  setTimeout(() => heroValue.classList.remove("value-updated"), 300);
+  // Animation - animate the savings badge
+  const savingsBadge = document.getElementById("savingsBadge");
+  if (savingsBadge) {
+    savingsBadge.classList.add("value-updated");
+    setTimeout(() => savingsBadge.classList.remove("value-updated"), 300);
+  }
 }
 
 function renderCashflowTable(response) {
@@ -1187,48 +1381,128 @@ function drawCashflowBars(canvas, cashflowYears) {
   ctx.fillText("Anno", left + plotW / 2, h - 8 * ratio);
 }
 
-function renderLegend(segments) {
-  const el = document.getElementById("pieLegend");
-  el.innerHTML = "";
+function drawCharts(response) {
+  const canvas = document.getElementById("cashflowChart");
 
-  for (const seg of segments) {
-    const item = document.createElement("div");
-    item.className = "legend-item";
-
-    const swatch = document.createElement("span");
-    swatch.className = "legend-swatch";
-    swatch.style.background = seg.color;
-
-    const label = document.createElement("span");
-    label.className = "legend-label";
-    label.textContent = seg.name;
-
-    const value = document.createElement("span");
-    value.className = "legend-value";
-    value.textContent = euro(seg.value);
-
-    item.appendChild(swatch);
-    item.appendChild(label);
-    item.appendChild(value);
-    el.appendChild(item);
-  }
+  // Draw cumulative investment return chart
+  drawInvestmentChart(canvas, response.cashflow_anni || []);
 }
 
-function drawCharts(response) {
-  const pie = document.getElementById("pieBreakdown");
-  const bars = document.getElementById("cashflowChart");
+// Draw cumulative savings chart (area chart style)
+function drawInvestmentChart(canvas, cashflowYears) {
+  if (!canvas || !cashflowYears.length) return;
 
-  const segmentsRaw = [
-    { name: "Rata annua", value: Math.max(0, Number(response.rata_annua_impianto_eur) || 0), color: COLORS.chart.rata },
-    { name: "Detrazione", value: Math.max(0, Number(response.detrazione_annua_eur) || 0), color: COLORS.chart.detrazione },
-    { name: "Risparmio", value: Math.max(0, Number(response.risparmio_bolletta_eur) || 0), color: COLORS.chart.risparmio },
-    { name: "Ricavo GSE", value: Math.max(0, Number(response.ricavo_gse_eur) || 0), color: COLORS.chart.gse },
-  ];
-  const segments = segmentsRaw.filter((s) => s.value > 0.0001);
+  const ctx = canvas.getContext("2d");
+  const ratio = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width;
+  const h = rect.height;
 
-  drawDonut(pie, segments);
-  renderLegend(segments);
-  drawCashflowBars(bars, response.cashflow_anni || []);
+  canvas.width = w * ratio;
+  canvas.height = h * ratio;
+  ctx.scale(ratio, ratio);
+
+  // Calculate cumulative values
+  let cumulative = 0;
+  const cumulativeData = cashflowYears.map(y => {
+    cumulative += y.risparmio_netto_eur;
+    return { anno: y.anno, value: cumulative };
+  });
+
+  const values = cumulativeData.map(d => d.value);
+  const minVal = Math.min(0, ...values);
+  const maxVal = Math.max(0, ...values);
+  const range = maxVal - minVal || 1;
+
+  const padding = { top: 20, right: 20, bottom: 30, left: 10 };
+  const plotW = w - padding.left - padding.right;
+  const plotH = h - padding.top - padding.bottom;
+
+  // Clear
+  ctx.clearRect(0, 0, w, h);
+
+  // Zero line position
+  const zeroY = padding.top + (maxVal / range) * plotH;
+
+  // Draw zero line (dashed)
+  ctx.strokeStyle = "#9ca3af";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(padding.left, zeroY);
+  ctx.lineTo(w - padding.right, zeroY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw area fill
+  const gradient = ctx.createLinearGradient(0, padding.top, 0, h - padding.bottom);
+  gradient.addColorStop(0, "rgba(16, 185, 129, 0.3)");
+  gradient.addColorStop(1, "rgba(16, 185, 129, 0.05)");
+
+  ctx.beginPath();
+  ctx.moveTo(padding.left, zeroY);
+
+  cumulativeData.forEach((d, i) => {
+    const x = padding.left + (i / (cumulativeData.length - 1)) * plotW;
+    const y = padding.top + ((maxVal - d.value) / range) * plotH;
+    ctx.lineTo(x, y);
+  });
+
+  ctx.lineTo(w - padding.right, zeroY);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
+  ctx.fill();
+
+  // Draw line
+  ctx.beginPath();
+  cumulativeData.forEach((d, i) => {
+    const x = padding.left + (i / (cumulativeData.length - 1)) * plotW;
+    const y = padding.top + ((maxVal - d.value) / range) * plotH;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = "#10b981";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Draw breakeven point marker
+  const breakevenIdx = cumulativeData.findIndex(d => d.value > 0);
+  if (breakevenIdx > 0) {
+    const x = padding.left + (breakevenIdx / (cumulativeData.length - 1)) * plotW;
+    const y = padding.top + ((maxVal - cumulativeData[breakevenIdx].value) / range) * plotH;
+
+    // Vertical line to zero
+    ctx.strokeStyle = "#f59e0b";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, zeroY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Marker dot
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#f59e0b";
+    ctx.fill();
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // X-axis labels
+  ctx.fillStyle = "#6b7280";
+  ctx.font = "10px 'DM Sans', sans-serif";
+  ctx.textAlign = "center";
+  [0, 5, 10, 15, 20, 25].forEach(anno => {
+    if (anno === 0) return;
+    const idx = anno - 1;
+    if (idx < cumulativeData.length) {
+      const x = padding.left + (idx / (cumulativeData.length - 1)) * plotW;
+      ctx.fillText("Anno " + anno, x, h - 8);
+    }
+  });
 }
 
 // ─── Calculation (Local - PWA Offline-capable) ─────────────────────────────
@@ -1262,6 +1536,7 @@ function bind() {
     const id = e?.target?.id;
     if (
       selectedOffer &&
+      clientType === 'residenziale' &&
       ["costo_impianto_eur", "anni_finanziamento", "taeg_annuo_percent", "usa_rata_semplice"].includes(id)
     ) {
       selectedOffer = null;
@@ -1270,10 +1545,35 @@ function bind() {
       modelSel.value = "";
       populateTerms(null);
     }
+
+    // Auto-calculate production from manual potenza kW
+    if (id === 'potenza_kw_manuale' && clientType === 'aziendale' && !selectedOffer) {
+      const kw = Number(document.getElementById('potenza_kw_manuale').value);
+      if (Number.isFinite(kw) && kw > 0) {
+        setValue('produzione_annua_kwh', Math.round(kw * KWH_PER_KW_PER_YEAR));
+      }
+    }
+
+    // Auto-set autoconsumo to 80% when battery storage is added
+    if (id === 'accumulo_kwh_manuale') {
+      const accumulo = Number(document.getElementById('accumulo_kwh_manuale').value);
+      if (accumulo > 0) {
+        setValue('autoconsumo_percent', 80);
+      }
+    }
+
     debounceRecalc();
   });
 
   form.addEventListener("change", debounceRecalc);
+
+  // Client type selector
+  document.querySelectorAll('input[name="clientType"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      onClientTypeChange(e.target.value);
+    });
+  });
+
   debounceRecalc();
 }
 
@@ -1329,44 +1629,68 @@ function initManualQuoteModal() {
     // Refresh datasheet selector when modal opens
     renderDatasheetSelector("manualDatasheetSelector");
 
-    // Pre-populate from main calculator if a system is selected
+    // Pre-select "Spett." for business clients
+    if (clientType === 'aziendale') {
+      const spettRadio = document.querySelector('input[name="clientTitle"][value="spett"]');
+      if (spettRadio) spettRadio.checked = true;
+    }
+
+    // Pre-fill financing and price from main form
+    const anniFinanziamento = numberValue("anni_finanziamento");
+    if (anniFinanziamento) {
+      document.getElementById("manualAnniFinanziamento").value = anniFinanziamento;
+    }
+    const taeg = numberValue("taeg_annuo_percent");
+    if (taeg) {
+      document.getElementById("manualTaegPercent").value = taeg;
+    }
+
+    // Pre-populate from main calculator if a catalog system is selected
     if (selectedOffer) {
       // Find and check the corresponding checkbox (id format: manual-{item.id})
       const checkbox = document.getElementById(`manual-${selectedOffer.id}`);
       if (checkbox && !checkbox.checked) {
         checkbox.checked = true;
-        // Add selected class to parent item
         const itemDiv = checkbox.closest('.multi-select-item');
         if (itemDiv) {
           itemDiv.classList.add('selected');
         }
-        // Add to selectedManualSystems if not already present
         if (!selectedManualSystems.find(s => s.id === selectedOffer.id)) {
           selectedManualSystems.push(selectedOffer);
         }
       }
-
-      // Pre-fill financing duration from main form
-      const anniFinanziamento = numberValue("anni_finanziamento");
-      if (anniFinanziamento) {
-        document.getElementById("manualAnniFinanziamento").value = anniFinanziamento;
-      }
-
-      // Pre-fill TAEG from main form
-      const taeg = numberValue("taeg_annuo_percent");
-      if (taeg) {
-        document.getElementById("manualTaegPercent").value = taeg;
-      }
-
-      // Update summary and total price
       updateManualSummary();
-    }
+    } else if (clientType === 'aziendale') {
+      // No catalog selection: build virtual system from manual fields
+      const potenza = Number(document.getElementById('potenza_kw_manuale')?.value) || 0;
+      const accumulo = Number(document.getElementById('accumulo_kwh_manuale')?.value) || 0;
+      const prezzo = numberValue("costo_impianto_eur");
 
-    // If we have calculation data, suggest including savings
-    const savingsCheckbox = document.getElementById("includeSavingsCalc");
-    if (savingsCheckbox && lastResponse) {
-      // Don't auto-check, but user can choose
-      // Just ensure checkbox is visible/enabled
+      let label = `${potenza} kW`;
+      if (accumulo > 0) label += ` + ${accumulo} kWh acc`;
+
+      const virtualSystem = {
+        id: '_custom_aziendale',
+        category: 'Personalizzato',
+        label,
+        potenza_kw: potenza,
+        accumulo_kwh: accumulo,
+        prezzo_eur: prezzo,
+        rate_mensili_eur: {},
+        taeg_annuo_percent_by_term: {},
+      };
+
+      selectedManualSystems = [virtualSystem];
+      const totalPriceInput = document.getElementById("manualTotalPrice");
+      if (totalPriceInput) totalPriceInput.value = prezzo;
+
+      const summaryEl = document.getElementById("selectedSystemsSummary");
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <span class="summary-count">Impianto personalizzato: ${label}</span>
+          <span class="summary-total">Totale: ${euro(prezzo)}</span>
+        `;
+      }
     }
   }
 
@@ -1404,8 +1728,9 @@ function initManualQuote() {
   // Initialize modal management
   initManualQuoteModal();
 
-  // Populate multi-select with systems grouped by category
-  const grouped = groupByCategory(catalog);
+  // Populate multi-select with systems grouped by category, filtered by client type
+  const filteredCatalog = filterCatalogItems(clientType);
+  const grouped = groupByCategory(filteredCatalog);
   container.innerHTML = "";
 
   for (const [cat, items] of grouped.entries()) {
@@ -1539,7 +1864,7 @@ async function generateManualQuote() {
     await initPdfAssets();
   }
 
-  await generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, clienteNote, selectedManualSystems, paymentType, anniFinanziamento, taegPercent, customTotalPrice, ivaType, includeSavings, lastResponse);
+  await generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, clienteNote, selectedManualSystems, paymentType, anniFinanziamento, taegPercent, customTotalPrice, ivaType, includeSavings, lastResponse, clientType);
 
   // Close modal after generating
   const modal = document.getElementById("manualQuoteModal");
@@ -1547,7 +1872,7 @@ async function generateManualQuote() {
 }
 
 // ─── Generate Manual PDF ────────────────────────────────────────────────────
-async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, clienteNote, systems, paymentType, anniFinanziamento, taegPercent = 0, customTotalPrice = 0, ivaType = "inclusa", includeSavings = false, savingsData = null) {
+async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, clienteNote, systems, paymentType, anniFinanziamento, taegPercent = 0, customTotalPrice = 0, ivaType = "inclusa", includeSavings = false, savingsData = null, clientTypeParam = "residenziale") {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({
     orientation: "portrait",
@@ -1604,12 +1929,13 @@ async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, cl
   // Calculate price ratio for proportional pricing when custom price is set
   const priceRatio = customTotalPrice > 0 && systemsTotal > 0 ? customTotalPrice / systemsTotal : 1;
 
-  // IVA calculation: catalog prices are IVA inclusa (10%)
-  // If user selects "esclusa", we show the price without IVA
-  const IVA_RATE = 0.10;
+  // IVA handling:
+  // The user enters the price they want shown on the quote.
+  // "IVA inclusa" = price already includes 10% IVA
+  // "IVA esclusa" = price is net (business client handles IVA separately)
   let totalPrice, ivaLabel;
   if (ivaType === "esclusa") {
-    totalPrice = Math.round(totalPriceBase / (1 + IVA_RATE));
+    totalPrice = totalPriceBase;
     ivaLabel = "IVA esclusa";
   } else {
     totalPrice = totalPriceBase;
@@ -1904,7 +2230,7 @@ async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, cl
   doc.text("Findomestic  |  COMPASS  |  FIDITALIA  |  Banca Sella", pageWidth / 2, pageHeight - 16, { align: "center" });
 
   // ═══════════════════════════════════════════════════════════════════════
-  // OPTIONAL: Economic Analysis Page (if includeSavings is true)
+  // OPTIONAL: Solar Analytics Dashboard Page (single page)
   // ═══════════════════════════════════════════════════════════════════════
   if (includeSavings && savingsData) {
     doc.addPage();
@@ -1913,207 +2239,302 @@ async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, cl
       addBackgroundImage(pdfAssets.images.pageBaseClean);
     }
 
-    y = 45;
+    y = 40;
 
-    // Section title
-    setFont("bold", 20);
+    // Page title
+    setFont("bold", 18);
     doc.setTextColor(255, 220, 100);
-    doc.text("Analisi Economica", margin + 5, y);
-    y += 18;
+    doc.text("Analisi Risparmio Energetico", margin + 5, y);
+    y += 14;
 
-    // Current situation box
+    // ─── Section 1: Comparison Cards (PRIMA | DOPO) ───────────────────────
+    const cardWidth = (contentWidth - 15) / 2;
+    const cardHeight = 52;
+    const cardLeftX = margin + 5;
+    const cardRightX = margin + 10 + cardWidth;
+
+    // Card PRIMA (left)
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(cardLeftX, y, cardWidth, cardHeight, 4, 4, 'F');
+
+    // Red top bar
+    doc.setFillColor(239, 68, 68);
+    doc.rect(cardLeftX, y, cardWidth, 3, 'F');
+
+    setFont("bold", 9);
+    doc.setTextColor(239, 68, 68);
+    doc.text("PRIMA (OGGI)", cardLeftX + 8, y + 12);
+
+    setFont("normal", 8);
+    doc.setTextColor(100, 100, 100);
+    doc.text("SPESA ENERGETICA TOTALE", cardLeftX + 8, y + 20);
+
+    setFont("bold", 22);
+    doc.setTextColor(239, 68, 68);
+    const primaAmountText = euro(savingsData.spesa_annua_attuale_eur);
+    const primaAmountWidth = doc.getTextWidth(primaAmountText);
+    doc.text(primaAmountText, cardLeftX + 8, y + 36);
+
+    setFont("normal", 10);
+    doc.setTextColor(100, 100, 100);
+    doc.text("/anno", cardLeftX + 8 + primaAmountWidth + 2, y + 36);
+
+    // Card DOPO (right)
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(cardRightX, y, cardWidth, cardHeight, 4, 4, 'F');
+
+    // Green top bar
+    doc.setFillColor(16, 185, 129);
+    doc.rect(cardRightX, y, cardWidth, 3, 'F');
+
+    setFont("bold", 9);
+    doc.setTextColor(16, 185, 129);
+    doc.text("DOPO (CON SOLARE)", cardRightX + 8, y + 12);
+
+    setFont("normal", 8);
+    doc.setTextColor(100, 100, 100);
+    doc.text("NUOVA SPESA NETTA", cardRightX + 8, y + 20);
+
+    setFont("bold", 22);
+    doc.setTextColor(16, 185, 129);
+    const dopoAmountText = euro(Math.max(0, savingsData.spesa_nuova_totale_eur));
+    const dopoAmountWidth = doc.getTextWidth(dopoAmountText);
+    doc.text(dopoAmountText, cardRightX + 8, y + 36);
+
+    setFont("normal", 10);
+    doc.setTextColor(100, 100, 100);
+    doc.text("/anno", cardRightX + 8 + dopoAmountWidth + 2, y + 36);
+
+    // Savings badge
+    const risparmioNetto = savingsData.risparmio_netto_eur;
+    const percentSaved = savingsData.spesa_annua_attuale_eur > 0
+      ? Math.round((risparmioNetto / savingsData.spesa_annua_attuale_eur) * 100)
+      : 0;
+    doc.setFillColor(16, 185, 129);
+    doc.roundedRect(cardRightX + cardWidth - 28, y + 8, 22, 12, 3, 3, 'F');
+    setFont("bold", 9);
+    doc.setTextColor(255, 255, 255);
+    doc.text("-" + Math.abs(percentSaved) + "%", cardRightX + cardWidth - 17, y + 16, { align: "center" });
+
+    y += cardHeight + 8;
+
+    // ─── Section 2: Status Bar (Bilancio Annuale Netto) ───────────────────
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(margin + 5, y, contentWidth - 10, 28, 4, 4, 'F');
 
-    setFont("bold", 13);
-    doc.setTextColor(59, 82, 128);
-    doc.text("Spesa energetica annua attuale:", margin + 12, y + 12);
-
-    setFont("bold", 18);
-    doc.setTextColor(196, 30, 58);
-    doc.text(euro(savingsData.spesa_annua_attuale_eur), pageWidth - margin - 18, y + 12, { align: "right" });
-
-    setFont("normal", 11);
+    setFont("bold", 8);
     doc.setTextColor(100, 100, 100);
-    doc.text("(prima dell'installazione del fotovoltaico)", margin + 12, y + 22);
+    doc.text("BILANCIO ANNUALE NETTO", margin + 12, y + 8);
 
-    y += 38;
+    const isPositive = risparmioNetto >= 0;
+    setFont("bold", 12);
+    doc.setTextColor(isPositive ? 16 : 239, isPositive ? 185 : 68, isPositive ? 129 : 68);
+    doc.text("Status: " + (isPositive ? "IN ATTIVO" : "IN PASSIVO"), margin + 12, y + 20);
 
-    // Financial breakdown
+    // Status track
+    const trackX = margin + 75;
+    const trackWidth = 70;
+    const trackY = y + 14;
+
+    // Red to green gradient track (simplified)
+    doc.setFillColor(254, 202, 202);
+    doc.roundedRect(trackX, trackY, trackWidth / 2, 6, 2, 2, 'F');
+    doc.setFillColor(167, 243, 208);
+    doc.roundedRect(trackX + trackWidth / 2, trackY, trackWidth / 2, 6, 2, 2, 'F');
+
+    // Cursor position
+    const cursorPos = isPositive
+      ? 0.5 + Math.min(0.5, risparmioNetto / 2000)
+      : 0.5 - Math.min(0.5, Math.abs(risparmioNetto) / 2000);
+    doc.setFillColor(isPositive ? 16 : 239, isPositive ? 185 : 68, isPositive ? 129 : 68);
+    doc.circle(trackX + trackWidth * cursorPos, trackY + 3, 4, 'F');
+
+    // Guadagno annuale
+    setFont("bold", 8);
+    doc.setTextColor(100, 100, 100);
+    doc.text("GUADAGNO ANNUALE", pageWidth - margin - 45, y + 8);
+
     setFont("bold", 14);
-    doc.setTextColor(...white);
-    doc.text("Dettaglio costi e benefici annui:", margin + 5, y);
-    y += 12;
+    doc.setTextColor(isPositive ? 16 : 239, isPositive ? 185 : 68, isPositive ? 129 : 68);
+    const guadagnoText = (isPositive ? "+ " : "- ") + euro(Math.abs(risparmioNetto));
+    doc.text(guadagnoText, pageWidth - margin - 12, y + 21, { align: "right" });
 
-    const savingsFinancialItems = [
-      { label: "Rata annua finanziamento (" + anniFinanziamento + " anni)", value: euro(savingsData.rata_annua_impianto_eur), isNegative: true },
-      { label: "Detrazione fiscale annua (recupero IRPEF)", value: "- " + euro(savingsData.detrazione_annua_eur), isNegative: false },
-      { label: "Risparmio in bolletta (autoconsumo)", value: "- " + euro(savingsData.risparmio_bolletta_eur), isNegative: false },
-      { label: "Ricavo vendita energia al GSE", value: "- " + euro(savingsData.ricavo_gse_eur), isNegative: false }
+    y += 36;
+
+    // ─── Section 3: Two Column Layout (Waterfall | Investment Chart) ──────
+    const colWidth = (contentWidth - 15) / 2;
+    const colLeftX = margin + 5;
+    const colRightX = margin + 10 + colWidth;
+    const colHeight = 95;
+
+    // ─── Left Column: Annual Costs Detail ─────────────────────────────────────
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(colLeftX, y, colWidth, colHeight, 4, 4, 'F');
+
+    setFont("bold", 10);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Dettaglio Flussi Annuali", colLeftX + 6, y + 10);
+
+    // Cost detail data
+    const wfData = [
+      { label: "Bolletta attuale", value: savingsData.spesa_annua_attuale_eur, color: [239, 68, 68], prefix: "" },
+      { label: "Risparmio energia", value: savingsData.risparmio_bolletta_eur, color: [16, 185, 129], prefix: "- " },
+      { label: "Ricavo GSE", value: savingsData.ricavo_gse_eur, color: [5, 150, 105], prefix: "- " },
     ];
+    if (clientTypeParam === 'residenziale' && savingsData.detrazione_annua_eur > 0) {
+      wfData.push({ label: "Detrazione fiscale", value: savingsData.detrazione_annua_eur, color: [59, 130, 246], prefix: "- " });
+    }
+    wfData.push(
+      { label: "Rata finanziamento", value: savingsData.rata_annua_impianto_eur, color: [245, 158, 11], prefix: "+ " },
+      { label: "NUOVA SPESA", value: Math.max(0, savingsData.spesa_nuova_totale_eur), color: [55, 65, 81], prefix: "", isFinal: true }
+    );
 
-    savingsFinancialItems.forEach((item) => {
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(margin + 5, y, contentWidth - 10, 16, 3, 3, 'F');
+    let rowY = y + 20;
+    const rowHeight = 12;
 
-      setFont("normal", 11);
-      doc.setTextColor(60, 60, 60);
-      doc.text(item.label, margin + 12, y + 11);
+    wfData.forEach((item) => {
+      // Color indicator dot
+      doc.setFillColor(...item.color);
+      doc.circle(colLeftX + 8, rowY - 1, 2, 'F');
 
-      setFont("bold", 12);
-      doc.setTextColor(item.isNegative ? 196 : 39, item.isNegative ? 30 : 174, item.isNegative ? 58 : 96);
-      doc.text(item.value, pageWidth - margin - 18, y + 11, { align: "right" });
+      // Label
+      setFont(item.isFinal ? "bold" : "normal", item.isFinal ? 9 : 8);
+      doc.setTextColor(80, 80, 80);
+      doc.text(item.label, colLeftX + 14, rowY);
 
-      y += 19;
+      // Value - right aligned, larger and bolder
+      setFont("bold", item.isFinal ? 11 : 9);
+      doc.setTextColor(...item.color);
+      const valueText = item.prefix + euro(item.value);
+      doc.text(valueText, colLeftX + colWidth - 8, rowY, { align: "right" });
+
+      rowY += rowHeight;
     });
 
-    y += 12;
+    // ─── Right Column: Investment Return Chart ────────────────────────────
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(colRightX, y, colWidth, colHeight, 4, 4, 'F');
 
-    // Result box
-    const delta = savingsData.delta_vs_spesa_attuale_eur;
-    const isPositiveSavings = delta <= 0;
+    setFont("bold", 10);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Rientro Investimento", colRightX + 6, y + 10);
 
-    doc.setFillColor(isPositiveSavings ? 39 : 196, isPositiveSavings ? 174 : 30, isPositiveSavings ? 96 : 58);
-    doc.roundedRect(margin + 5, y, contentWidth - 10, 40, 5, 5, 'F');
+    // Breakeven badge
+    let cumulative = 0;
+    let breakevenYear = 25;
+    for (const year of savingsData.cashflow_anni) {
+      cumulative += year.risparmio_netto_eur;
+      if (cumulative > 0 && breakevenYear === 25) {
+        breakevenYear = year.anno;
+      }
+    }
 
-    setFont("bold", 13);
-    doc.setTextColor(...white);
-    doc.text("COSTO NETTO ANNUO CON FOTOVOLTAICO:", margin + 12, y + 14);
+    doc.setFillColor(254, 243, 199);
+    doc.roundedRect(colRightX + colWidth - 45, y + 4, 40, 10, 2, 2, 'F');
+    setFont("bold", 6);
+    doc.setTextColor(180, 83, 9);
+    doc.text("PAREGGIO: ANNO " + breakevenYear, colRightX + colWidth - 25, y + 11, { align: "center" });
 
-    setFont("bold", 22);
-    doc.text(euro(savingsData.costo_netto_annuo_eur), pageWidth - margin - 18, y + 14, { align: "right" });
+    // Simple area chart
+    const chartX = colRightX + 10;
+    const chartY = y + 20;
+    const chartW = colWidth - 20;
+    const chartH = 50;
 
-    setFont("bold", 12);
-    doc.text(isPositiveSavings ? "RISPARMIO RISPETTO AD OGGI:" : "DIFFERENZA:", margin + 12, y + 30);
+    // Calculate cumulative data
+    cumulative = 0;
+    const cumulativeData = savingsData.cashflow_anni.map(yr => {
+      cumulative += yr.risparmio_netto_eur;
+      return cumulative;
+    });
+    const minCum = Math.min(0, ...cumulativeData);
+    const maxCum = Math.max(0, ...cumulativeData);
+    const range = maxCum - minCum || 1;
 
-    setFont("bold", 16);
-    const savingsDeltaText = isPositiveSavings
-      ? euro(Math.abs(delta)) + " ALL'ANNO!"
-      : euro(delta) + " all'anno";
-    doc.text(savingsDeltaText, pageWidth - margin - 18, y + 30, { align: "right" });
+    // Zero line
+    const zeroY = chartY + (maxCum / range) * chartH;
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.3);
+    doc.line(chartX, zeroY, chartX + chartW, zeroY);
 
-    y += 50;
+    // Draw area fill using lines (simplified)
+    doc.setFillColor(167, 243, 208);
+    doc.setDrawColor(16, 185, 129);
+    doc.setLineWidth(1.5);
 
-    // After financing box
+    // Start path from zero line
+    let lastX = chartX;
+    let lastY = zeroY;
+
+    for (let i = 0; i < cumulativeData.length; i++) {
+      const x = chartX + (i / (cumulativeData.length - 1)) * chartW;
+      const yVal = chartY + ((maxCum - cumulativeData[i]) / range) * chartH;
+
+      if (i > 0) {
+        doc.line(lastX, lastY, x, yVal);
+      }
+      lastX = x;
+      lastY = yVal;
+    }
+
+    // Breakeven marker
+    if (breakevenYear < 25) {
+      const bX = chartX + ((breakevenYear - 1) / 24) * chartW;
+      doc.setFillColor(245, 158, 11);
+      doc.circle(bX, zeroY, 3, 'F');
+    }
+
+    // X-axis labels
+    setFont("normal", 6);
+    doc.setTextColor(100, 100, 100);
+    [5, 10, 15, 20, 25].forEach(yr => {
+      const x = chartX + ((yr - 1) / 24) * chartW;
+      doc.text("" + yr, x, chartY + chartH + 8, { align: "center" });
+    });
+
+    y += colHeight + 8;
+
+    // ─── Section 4: Summary Cards ─────────────────────────────────────────
+    const summaryWidth = (contentWidth - 15) / 2;
+
+    // Total 25 years box
+    const total25 = savingsData.cashflow_anni.reduce((sum, row) => sum + row.risparmio_netto_eur, 0);
+    const isTotal25Positive = total25 >= 0;
+
+    doc.setFillColor(isTotal25Positive ? 167 : 254, isTotal25Positive ? 243 : 202, isTotal25Positive ? 208 : 202);
+    doc.roundedRect(margin + 5, y, summaryWidth, 24, 4, 4, 'F');
+
+    setFont("bold", 7);
+    doc.setTextColor(isTotal25Positive ? 6 : 153, isTotal25Positive ? 95 : 27, isTotal25Positive ? 70 : 27);
+    doc.text("GUADAGNO FINALE (25 ANNI)", margin + 12, y + 9);
+
+    setFont("bold", 14);
+    doc.text((isTotal25Positive ? "+ " : "- ") + euro(Math.abs(total25)), margin + 12, y + 20);
+
+    // Annual return box
+    const costoImpianto = parseFloat(customTotalPrice) || 12000;
+    const rendimento = costoImpianto > 0 ? ((total25 / costoImpianto) / 25 * 100).toFixed(1) : 0;
+
+    doc.setFillColor(241, 245, 249);
+    doc.roundedRect(margin + 10 + summaryWidth, y, summaryWidth, 24, 4, 4, 'F');
+
+    setFont("bold", 7);
+    doc.setTextColor(100, 100, 100);
+    doc.text("RENDIMENTO MEDIO ANNUO", margin + 17 + summaryWidth, y + 9);
+
+    setFont("bold", 14);
+    doc.setTextColor(50, 50, 50);
+    doc.text(rendimento + "%", margin + 17 + summaryWidth, y + 20);
+
+    y += 32;
+
+    // After financing note
     const yearAfterFinancing = savingsData.cashflow_anni.find((x) => x.anno === anniFinanziamento + 1);
     if (yearAfterFinancing) {
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(margin + 5, y, contentWidth - 10, 30, 4, 4, 'F');
-
-      setFont("bold", 12);
-      doc.setTextColor(59, 82, 128);
-      doc.text("DOPO IL FINANZIAMENTO (Anno " + (anniFinanziamento + 1) + " in poi):", margin + 12, y + 12);
-
-      setFont("bold", 14);
-      doc.setTextColor(39, 174, 96);
-      doc.text("Risparmio netto: " + euro(Math.abs(yearAfterFinancing.costo_netto_eur)) + "/anno", margin + 12, y + 24);
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // OPTIONAL: 25-Year Projection Page
-    // ═══════════════════════════════════════════════════════════════════════
-    doc.addPage();
-
-    if (pdfAssets.images.pageBaseClean) {
-      addBackgroundImage(pdfAssets.images.pageBaseClean);
-    }
-
-    y = 45;
-
-    // Section title
-    setFont("bold", 20);
-    doc.setTextColor(255, 220, 100);
-    doc.text("Proiezione a 25 Anni", margin + 5, y);
-    y += 20;
-
-    // Visual bar chart for key years
-    const keyYears = [1, 5, 10, 15, 20, 25];
-    const chartHeight = 100;
-    const chartStartY = y;
-    const barWidth = 22;
-    const chartLeftMargin = margin + 25;
-    const barSpacing = (contentWidth - 50) / keyYears.length;
-
-    // Find max absolute value for scaling
-    const keyYearData = keyYears.map(yr => savingsData.cashflow_anni.find(r => r.anno === yr));
-    const maxAbsValue = Math.max(...keyYearData.map(d => Math.abs(d?.costo_netto_eur || 0)), 100);
-
-    // Draw chart background
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(margin + 5, y, contentWidth - 10, chartHeight + 70, 5, 5, 'F');
-
-    // Draw zero line
-    const zeroLineY = chartStartY + 25 + chartHeight / 2;
-    doc.setDrawColor(150, 150, 150);
-    doc.setLineWidth(0.5);
-    doc.line(chartLeftMargin - 10, zeroLineY, pageWidth - margin - 20, zeroLineY);
-
-    // Draw bars for key years
-    keyYears.forEach((yr, i) => {
-      const yearData = savingsData.cashflow_anni.find(r => r.anno === yr);
-      if (!yearData) return;
-
-      const value = yearData.costo_netto_eur;
-      const barX = chartLeftMargin + i * barSpacing;
-      const barHeight = Math.abs(value) / maxAbsValue * (chartHeight / 2 - 10);
-      const isNegativeBar = value <= 0;
-
-      // Bar color
-      if (isNegativeBar) {
-        doc.setFillColor(39, 174, 96);
-      } else {
-        doc.setFillColor(196, 30, 58);
-      }
-
-      // Draw bar
-      if (isNegativeBar) {
-        doc.roundedRect(barX, zeroLineY - barHeight, barWidth, barHeight, 2, 2, 'F');
-      } else {
-        doc.roundedRect(barX, zeroLineY, barWidth, barHeight, 2, 2, 'F');
-      }
-
-      // Year label
-      setFont("bold", 11);
-      doc.setTextColor(60, 60, 60);
-      doc.text("Anno " + yr, barX + barWidth / 2, chartStartY + chartHeight + 35, { align: "center" });
-
-      // Value label
       setFont("normal", 9);
-      doc.setTextColor(isNegativeBar ? 39 : 196, isNegativeBar ? 174 : 30, isNegativeBar ? 96 : 58);
-      const valueY = isNegativeBar ? zeroLineY - barHeight - 5 : zeroLineY + barHeight + 10;
-      doc.text(euro(value), barX + barWidth / 2, valueY, { align: "center" });
-    });
-
-    // Legend
-    const legendY = chartStartY + chartHeight + 50;
-
-    doc.setFillColor(39, 174, 96);
-    doc.rect(margin + 45, legendY, 12, 8, 'F');
-    setFont("bold", 11);
-    doc.setTextColor(60, 60, 60);
-    doc.text("Risparmio", margin + 62, legendY + 6);
-
-    doc.setFillColor(196, 30, 58);
-    doc.rect(margin + 115, legendY, 12, 8, 'F');
-    doc.text("Costo", margin + 132, legendY + 6);
-
-    y = chartStartY + chartHeight + 80;
-
-    // 25-year total summary box
-    const total25 = savingsData.cashflow_anni.reduce((sum, row) => sum + row.costo_netto_eur, 0);
-
-    doc.setFillColor(total25 <= 0 ? 39 : 196, total25 <= 0 ? 174 : 30, total25 <= 0 ? 96 : 58);
-    doc.roundedRect(margin + 5, y, contentWidth - 10, 35, 5, 5, 'F');
-
-    setFont("bold", 14);
-    doc.setTextColor(...white);
-    doc.text("BILANCIO TOTALE 25 ANNI:", margin + 15, y + 15);
-
-    setFont("bold", 20);
-    const total25Label = total25 <= 0
-      ? "RISPARMIO: " + euro(Math.abs(total25))
-      : "COSTO: " + euro(total25);
-    doc.text(total25Label, pageWidth - margin - 18, y + 23, { align: "right" });
+      doc.setTextColor(255, 255, 255);
+      doc.text("Dopo il finanziamento (Anno " + (anniFinanziamento + 1) + "+): risparmio netto " + euro(yearAfterFinancing.risparmio_netto_eur) + "/anno", margin + 10, y);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -2136,10 +2557,14 @@ async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, cl
   const notes = [
     "I valori indicati sono stime e possono variare in base alle condizioni reali.",
     "La produzione effettiva dipende dall'orientamento, inclinazione e ombreggiature del tetto.",
-    "La detrazione fiscale del 50% è soggetta alle normative vigenti al momento dell'installazione.",
+  ];
+  if (clientTypeParam === 'residenziale') {
+    notes.push("La detrazione fiscale del 50% è soggetta alle normative vigenti al momento dell'installazione.");
+  }
+  notes.push(
     "Il preventivo ha validità di 30 giorni dalla data di emissione.",
     "I prezzi indicati sono IVA inclusa dove applicabile."
-  ];
+  );
 
   // Calculate total height needed for notes
   let totalNotesHeight = 15;
@@ -2666,217 +3091,295 @@ async function generatePDF(clienteName, clienteIndirizzo, clienteNote, data) {
   doc.text("Findomestic  |  COMPASS  |  FIDITALIA  |  Banca Sella", pageWidth / 2, pageHeight - 16, { align: "center" });
 
   // ═══════════════════════════════════════════════════════════════════════
-  // PAGE 4: Economic Analysis
+  // PAGE 4: Solar Analytics Dashboard (single page)
   // ═══════════════════════════════════════════════════════════════════════
   doc.addPage();
 
-  // Add page background (clean version without white bands)
   if (pdfAssets.images.pageBaseClean) {
     addBackgroundImage(pdfAssets.images.pageBaseClean);
   }
 
-  y = 45;
+  y = 40;
 
-  // Section title
-  setFont("bold", 20);
+  // Page title
+  setFont("bold", 18);
   doc.setTextColor(255, 220, 100);
-  doc.text("Analisi Economica", margin + 5, y);
-  y += 18;
+  doc.text("Analisi Risparmio Energetico", margin + 5, y);
+  y += 14;
 
-  // Current situation box - white background for readability
+  // ─── Section 1: Comparison Cards (PRIMA | DOPO) ───────────────────────
+  const cardWidth = (contentWidth - 15) / 2;
+  const cardHeight = 52;
+  const cardLeftX = margin + 5;
+  const cardRightX = margin + 10 + cardWidth;
+
+  // Card PRIMA (left)
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(cardLeftX, y, cardWidth, cardHeight, 4, 4, 'F');
+
+  // Red top bar
+  doc.setFillColor(239, 68, 68);
+  doc.rect(cardLeftX, y, cardWidth, 3, 'F');
+
+  setFont("bold", 9);
+  doc.setTextColor(239, 68, 68);
+  doc.text("PRIMA (OGGI)", cardLeftX + 8, y + 12);
+
+  setFont("normal", 8);
+  doc.setTextColor(100, 100, 100);
+  doc.text("SPESA ENERGETICA TOTALE", cardLeftX + 8, y + 20);
+
+  setFont("bold", 22);
+  doc.setTextColor(239, 68, 68);
+  const primaAmountTextPdf = euro(data.spesa_annua_attuale_eur);
+  const primaAmountWidthPdf = doc.getTextWidth(primaAmountTextPdf);
+  doc.text(primaAmountTextPdf, cardLeftX + 8, y + 36);
+
+  setFont("normal", 10);
+  doc.setTextColor(100, 100, 100);
+  doc.text("/anno", cardLeftX + 8 + primaAmountWidthPdf + 2, y + 36);
+
+  // Card DOPO (right)
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(cardRightX, y, cardWidth, cardHeight, 4, 4, 'F');
+
+  // Green top bar
+  doc.setFillColor(16, 185, 129);
+  doc.rect(cardRightX, y, cardWidth, 3, 'F');
+
+  setFont("bold", 9);
+  doc.setTextColor(16, 185, 129);
+  doc.text("DOPO (CON SOLARE)", cardRightX + 8, y + 12);
+
+  setFont("normal", 8);
+  doc.setTextColor(100, 100, 100);
+  doc.text("NUOVA SPESA NETTA", cardRightX + 8, y + 20);
+
+  setFont("bold", 22);
+  doc.setTextColor(16, 185, 129);
+  const dopoAmountTextPdf = euro(Math.max(0, data.spesa_nuova_totale_eur));
+  const dopoAmountWidthPdf = doc.getTextWidth(dopoAmountTextPdf);
+  doc.text(dopoAmountTextPdf, cardRightX + 8, y + 36);
+
+  setFont("normal", 10);
+  doc.setTextColor(100, 100, 100);
+  doc.text("/anno", cardRightX + 8 + dopoAmountWidthPdf + 2, y + 36);
+
+  // Savings badge
+  const risparmioNettoPdf = data.risparmio_netto_eur;
+  const percentSavedPdf = data.spesa_annua_attuale_eur > 0
+    ? Math.round((risparmioNettoPdf / data.spesa_annua_attuale_eur) * 100)
+    : 0;
+  doc.setFillColor(16, 185, 129);
+  doc.roundedRect(cardRightX + cardWidth - 28, y + 8, 22, 12, 3, 3, 'F');
+  setFont("bold", 9);
+  doc.setTextColor(255, 255, 255);
+  doc.text("-" + Math.abs(percentSavedPdf) + "%", cardRightX + cardWidth - 17, y + 16, { align: "center" });
+
+  y += cardHeight + 8;
+
+  // ─── Section 2: Status Bar (Bilancio Annuale Netto) ───────────────────
   doc.setFillColor(255, 255, 255);
   doc.roundedRect(margin + 5, y, contentWidth - 10, 28, 4, 4, 'F');
 
-  setFont("bold", 13);
-  doc.setTextColor(59, 82, 128);
-  doc.text("Spesa energetica annua attuale:", margin + 12, y + 12);
-
-  setFont("bold", 18);
-  doc.setTextColor(196, 30, 58);
-  doc.text(euro(data.spesa_annua_attuale_eur), pageWidth - margin - 18, y + 12, { align: "right" });
-
-  setFont("normal", 11);
+  setFont("bold", 8);
   doc.setTextColor(100, 100, 100);
-  doc.text("(prima dell'installazione del fotovoltaico)", margin + 12, y + 22);
+  doc.text("BILANCIO ANNUALE NETTO", margin + 12, y + 8);
 
-  y += 38;
+  const isPositive = risparmioNettoPdf >= 0;
+  setFont("bold", 12);
+  doc.setTextColor(isPositive ? 16 : 239, isPositive ? 185 : 68, isPositive ? 129 : 68);
+  doc.text("Status: " + (isPositive ? "IN ATTIVO" : "IN PASSIVO"), margin + 12, y + 20);
 
-  // Financial breakdown - clean white cards
+  // Status track
+  const trackX = margin + 75;
+  const trackWidth = 70;
+  const trackY = y + 14;
+
+  doc.setFillColor(254, 202, 202);
+  doc.roundedRect(trackX, trackY, trackWidth / 2, 6, 2, 2, 'F');
+  doc.setFillColor(167, 243, 208);
+  doc.roundedRect(trackX + trackWidth / 2, trackY, trackWidth / 2, 6, 2, 2, 'F');
+
+  const cursorPos = isPositive
+    ? 0.5 + Math.min(0.5, risparmioNettoPdf / 2000)
+    : 0.5 - Math.min(0.5, Math.abs(risparmioNettoPdf) / 2000);
+  doc.setFillColor(isPositive ? 16 : 239, isPositive ? 185 : 68, isPositive ? 129 : 68);
+  doc.circle(trackX + trackWidth * cursorPos, trackY + 3, 4, 'F');
+
+  setFont("bold", 8);
+  doc.setTextColor(100, 100, 100);
+  doc.text("GUADAGNO ANNUALE", pageWidth - margin - 45, y + 8);
+
   setFont("bold", 14);
-  doc.setTextColor(...white);
-  doc.text("Dettaglio costi e benefici annui:", margin + 5, y);
-  y += 12;
+  doc.setTextColor(isPositive ? 16 : 239, isPositive ? 185 : 68, isPositive ? 129 : 68);
+  const guadagnoText = (isPositive ? "+ " : "- ") + euro(Math.abs(risparmioNettoPdf));
+  doc.text(guadagnoText, pageWidth - margin - 12, y + 21, { align: "right" });
 
-  const financialItems = [
-    { label: "Rata annua finanziamento (" + anniFinanziamento + " anni)", value: euro(data.rata_annua_impianto_eur), isNegative: true },
-    { label: "Detrazione fiscale annua (recupero IRPEF)", value: "- " + euro(data.detrazione_annua_eur), isNegative: false },
-    { label: "Risparmio in bolletta (autoconsumo)", value: "- " + euro(data.risparmio_bolletta_eur), isNegative: false },
-    { label: "Ricavo vendita energia al GSE", value: "- " + euro(data.ricavo_gse_eur), isNegative: false }
+  y += 36;
+
+  // ─── Section 3: Two Column Layout (Waterfall | Investment Chart) ──────
+  const colWidth = (contentWidth - 15) / 2;
+  const colLeftX = margin + 5;
+  const colRightX = margin + 10 + colWidth;
+  const colHeight = 95;
+
+  // ─── Left Column: Annual Costs Detail ─────────────────────────────────────
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(colLeftX, y, colWidth, colHeight, 4, 4, 'F');
+
+  setFont("bold", 10);
+  doc.setTextColor(50, 50, 50);
+  doc.text("Dettaglio Flussi Annuali", colLeftX + 6, y + 10);
+
+  const wfData = [
+    { label: "Bolletta attuale", value: data.spesa_annua_attuale_eur, color: [239, 68, 68], prefix: "" },
+    { label: "Risparmio energia", value: data.risparmio_bolletta_eur, color: [16, 185, 129], prefix: "- " },
+    { label: "Ricavo GSE", value: data.ricavo_gse_eur, color: [5, 150, 105], prefix: "- " },
   ];
+  if (data.detrazione_annua_eur > 0) {
+    wfData.push({ label: "Detrazione fiscale", value: data.detrazione_annua_eur, color: [59, 130, 246], prefix: "- " });
+  }
+  wfData.push(
+    { label: "Rata finanziamento", value: data.rata_annua_impianto_eur, color: [245, 158, 11], prefix: "+ " },
+    { label: "NUOVA SPESA", value: Math.max(0, data.spesa_nuova_totale_eur), color: [55, 65, 81], prefix: "", isFinal: true }
+  );
 
-  financialItems.forEach((item, i) => {
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(margin + 5, y, contentWidth - 10, 16, 3, 3, 'F');
+  let flowRowY = y + 20;
+  const flowRowHeight = 12;
 
-    setFont("normal", 11);
-    doc.setTextColor(60, 60, 60);
-    doc.text(item.label, margin + 12, y + 11);
+  wfData.forEach((item) => {
+    // Color indicator dot
+    doc.setFillColor(...item.color);
+    doc.circle(colLeftX + 8, flowRowY - 1, 2, 'F');
 
-    setFont("bold", 12);
-    doc.setTextColor(item.isNegative ? 196 : 39, item.isNegative ? 30 : 174, item.isNegative ? 58 : 96);
-    doc.text(item.value, pageWidth - margin - 18, y + 11, { align: "right" });
+    // Label
+    setFont(item.isFinal ? "bold" : "normal", item.isFinal ? 9 : 8);
+    doc.setTextColor(80, 80, 80);
+    doc.text(item.label, colLeftX + 14, flowRowY);
 
-    y += 19;
+    // Value - right aligned, larger and bolder
+    setFont("bold", item.isFinal ? 11 : 9);
+    doc.setTextColor(...item.color);
+    const valueText = item.prefix + euro(item.value);
+    doc.text(valueText, colLeftX + colWidth - 8, flowRowY, { align: "right" });
+
+    flowRowY += flowRowHeight;
   });
 
-  y += 12;
+  // ─── Right Column: Investment Return Chart ────────────────────────────
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(colRightX, y, colWidth, colHeight, 4, 4, 'F');
 
-  // Result box
-  const delta = data.delta_vs_spesa_attuale_eur;
-  const isPositive = delta <= 0;
+  setFont("bold", 10);
+  doc.setTextColor(50, 50, 50);
+  doc.text("Rientro Investimento", colRightX + 6, y + 10);
 
-  doc.setFillColor(isPositive ? 39 : 196, isPositive ? 174 : 30, isPositive ? 96 : 58);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, 40, 5, 5, 'F');
+  let cumulative = 0;
+  let breakevenYear = 25;
+  for (const year of data.cashflow_anni) {
+    cumulative += year.risparmio_netto_eur;
+    if (cumulative > 0 && breakevenYear === 25) {
+      breakevenYear = year.anno;
+    }
+  }
 
-  setFont("bold", 13);
-  doc.setTextColor(...white);
-  doc.text("COSTO NETTO ANNUO CON FOTOVOLTAICO:", margin + 12, y + 14);
+  doc.setFillColor(254, 243, 199);
+  doc.roundedRect(colRightX + colWidth - 45, y + 4, 40, 10, 2, 2, 'F');
+  setFont("bold", 6);
+  doc.setTextColor(180, 83, 9);
+  doc.text("PAREGGIO: ANNO " + breakevenYear, colRightX + colWidth - 25, y + 11, { align: "center" });
 
-  setFont("bold", 22);
-  doc.text(euro(data.costo_netto_annuo_eur), pageWidth - margin - 18, y + 14, { align: "right" });
+  const chartX = colRightX + 10;
+  const chartY = y + 20;
+  const chartW = colWidth - 20;
+  const chartH = 50;
 
-  setFont("bold", 12);
-  doc.text(isPositive ? "RISPARMIO RISPETTO AD OGGI:" : "DIFFERENZA:", margin + 12, y + 30);
+  cumulative = 0;
+  const cumulativeData = data.cashflow_anni.map(yr => {
+    cumulative += yr.risparmio_netto_eur;
+    return cumulative;
+  });
+  const minCum = Math.min(0, ...cumulativeData);
+  const maxCum = Math.max(0, ...cumulativeData);
+  const range = maxCum - minCum || 1;
 
-  setFont("bold", 16);
-  const deltaText = isPositive
-    ? euro(Math.abs(delta)) + " ALL'ANNO!"
-    : euro(delta) + " all'anno";
-  doc.text(deltaText, pageWidth - margin - 18, y + 30, { align: "right" });
+  const zeroYChart = chartY + (maxCum / range) * chartH;
+  doc.setDrawColor(150, 150, 150);
+  doc.setLineWidth(0.3);
+  doc.line(chartX, zeroYChart, chartX + chartW, zeroYChart);
 
-  y += 50;
+  doc.setFillColor(167, 243, 208);
+  doc.setDrawColor(16, 185, 129);
+  doc.setLineWidth(1.5);
 
-  // After financing box - clean white style
+  let lastX = chartX;
+  let lastY = zeroYChart;
+
+  for (let i = 0; i < cumulativeData.length; i++) {
+    const x = chartX + (i / (cumulativeData.length - 1)) * chartW;
+    const yVal = chartY + ((maxCum - cumulativeData[i]) / range) * chartH;
+
+    if (i > 0) {
+      doc.line(lastX, lastY, x, yVal);
+    }
+    lastX = x;
+    lastY = yVal;
+  }
+
+  if (breakevenYear < 25) {
+    const bX = chartX + ((breakevenYear - 1) / 24) * chartW;
+    doc.setFillColor(245, 158, 11);
+    doc.circle(bX, zeroYChart, 3, 'F');
+  }
+
+  setFont("normal", 6);
+  doc.setTextColor(100, 100, 100);
+  [5, 10, 15, 20, 25].forEach(yr => {
+    const x = chartX + ((yr - 1) / 24) * chartW;
+    doc.text("" + yr, x, chartY + chartH + 8, { align: "center" });
+  });
+
+  y += colHeight + 8;
+
+  // ─── Section 4: Summary Cards ─────────────────────────────────────────
+  const summaryWidth = (contentWidth - 15) / 2;
+
+  const total25 = data.cashflow_anni.reduce((sum, row) => sum + row.risparmio_netto_eur, 0);
+  const isTotal25Positive = total25 >= 0;
+
+  doc.setFillColor(isTotal25Positive ? 167 : 254, isTotal25Positive ? 243 : 202, isTotal25Positive ? 208 : 202);
+  doc.roundedRect(margin + 5, y, summaryWidth, 24, 4, 4, 'F');
+
+  setFont("bold", 7);
+  doc.setTextColor(isTotal25Positive ? 6 : 153, isTotal25Positive ? 95 : 27, isTotal25Positive ? 70 : 27);
+  doc.text("GUADAGNO FINALE (25 ANNI)", margin + 12, y + 9);
+
+  setFont("bold", 14);
+  doc.text((isTotal25Positive ? "+ " : "- ") + euro(Math.abs(total25)), margin + 12, y + 20);
+
+  const costoImpiantoPdf = parseFloat(prezzoImpianto) || 12000;
+  const rendimentoPdf = costoImpiantoPdf > 0 ? ((total25 / costoImpiantoPdf) / 25 * 100).toFixed(1) : 0;
+
+  doc.setFillColor(241, 245, 249);
+  doc.roundedRect(margin + 10 + summaryWidth, y, summaryWidth, 24, 4, 4, 'F');
+
+  setFont("bold", 7);
+  doc.setTextColor(100, 100, 100);
+  doc.text("RENDIMENTO MEDIO ANNUO", margin + 17 + summaryWidth, y + 9);
+
+  setFont("bold", 14);
+  doc.setTextColor(50, 50, 50);
+  doc.text(rendimentoPdf + "%", margin + 17 + summaryWidth, y + 20);
+
+  y += 32;
+
   const year11 = data.cashflow_anni.find((x) => x.anno === anniFinanziamento + 1);
   if (year11) {
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(margin + 5, y, contentWidth - 10, 30, 4, 4, 'F');
-
-    setFont("bold", 12);
-    doc.setTextColor(59, 82, 128);
-    doc.text("DOPO IL FINANZIAMENTO (Anno " + (anniFinanziamento + 1) + " in poi):", margin + 12, y + 12);
-
-    setFont("bold", 14);
-    doc.setTextColor(39, 174, 96);
-    doc.text("Risparmio netto: " + euro(Math.abs(year11.costo_netto_eur)) + "/anno", margin + 12, y + 24);
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // PAGE 5: 25-Year Cashflow Summary (Visual Chart)
-  // ═══════════════════════════════════════════════════════════════════════
-  doc.addPage();
-
-  // Add page background (clean version without white bands)
-  if (pdfAssets.images.pageBaseClean) {
-    addBackgroundImage(pdfAssets.images.pageBaseClean);
-  }
-
-  y = 45;
-
-  // Section title
-  setFont("bold", 20);
-  doc.setTextColor(255, 220, 100);
-  doc.text("Proiezione a 25 Anni", margin + 5, y);
-  y += 20;
-
-  // Visual bar chart for key years
-  const keyYears = [1, 5, 10, 15, 20, 25];
-  const chartHeight = 100;
-  const chartStartY = y;
-  const barWidth = 22;
-  const chartLeftMargin = margin + 25;
-  const barSpacing = (contentWidth - 50) / keyYears.length;
-
-  // Find max absolute value for scaling
-  const keyYearData = keyYears.map(yr => data.cashflow_anni.find(r => r.anno === yr));
-  const maxAbsValue = Math.max(...keyYearData.map(d => Math.abs(d?.costo_netto_eur || 0)), 100);
-
-  // Draw chart background (includes legend area)
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, chartHeight + 70, 5, 5, 'F');
-
-  // Draw zero line
-  const zeroLineY = chartStartY + 25 + chartHeight / 2;
-  doc.setDrawColor(150, 150, 150);
-  doc.setLineWidth(0.5);
-  doc.line(chartLeftMargin - 10, zeroLineY, pageWidth - margin - 20, zeroLineY);
-
-  // Draw bars for key years
-  keyYears.forEach((yr, i) => {
-    const yearData = data.cashflow_anni.find(r => r.anno === yr);
-    if (!yearData) return;
-
-    const value = yearData.costo_netto_eur;
-    const barX = chartLeftMargin + i * barSpacing;
-    const barHeight = Math.abs(value) / maxAbsValue * (chartHeight / 2 - 10);
-    const isNegative = value <= 0; // Negative = savings = green
-
-    // Bar color
-    if (isNegative) {
-      doc.setFillColor(39, 174, 96); // Green for savings
-    } else {
-      doc.setFillColor(196, 30, 58); // Red for costs
-    }
-
-    // Draw bar (above or below zero line)
-    if (isNegative) {
-      doc.roundedRect(barX, zeroLineY - barHeight, barWidth, barHeight, 2, 2, 'F');
-    } else {
-      doc.roundedRect(barX, zeroLineY, barWidth, barHeight, 2, 2, 'F');
-    }
-
-    // Year label
-    setFont("bold", 11);
-    doc.setTextColor(60, 60, 60);
-    doc.text("Anno " + yr, barX + barWidth / 2, chartStartY + chartHeight + 35, { align: "center" });
-
-    // Value label
     setFont("normal", 9);
-    doc.setTextColor(isNegative ? 39 : 196, isNegative ? 174 : 30, isNegative ? 96 : 58);
-    const valueY = isNegative ? zeroLineY - barHeight - 5 : zeroLineY + barHeight + 10;
-    doc.text(euro(value), barX + barWidth / 2, valueY, { align: "center" });
-  });
-
-  // Legend - inside the same white box
-  const legendY = chartStartY + chartHeight + 50;
-
-  doc.setFillColor(39, 174, 96);
-  doc.rect(margin + 45, legendY, 12, 8, 'F');
-  setFont("bold", 11);
-  doc.setTextColor(60, 60, 60);
-  doc.text("Risparmio", margin + 62, legendY + 6);
-
-  doc.setFillColor(196, 30, 58);
-  doc.rect(margin + 115, legendY, 12, 8, 'F');
-  doc.text("Costo", margin + 132, legendY + 6);
-
-  y = chartStartY + chartHeight + 80;
-
-  // 25-year total summary box
-  const total25 = data.cashflow_anni.reduce((sum, row) => sum + row.costo_netto_eur, 0);
-
-  doc.setFillColor(total25 <= 0 ? 39 : 196, total25 <= 0 ? 174 : 30, total25 <= 0 ? 96 : 58);
-  doc.roundedRect(margin + 5, y, contentWidth - 10, 35, 5, 5, 'F');
-
-  setFont("bold", 14);
-  doc.setTextColor(...white);
-  doc.text("BILANCIO TOTALE 25 ANNI:", margin + 15, y + 15);
-
-  setFont("bold", 20);
-  const totalLabel = total25 <= 0
-    ? "RISPARMIO: " + euro(Math.abs(total25))
-    : "COSTO: " + euro(total25);
-  doc.text(totalLabel, pageWidth - margin - 18, y + 23, { align: "right" });
+    doc.setTextColor(255, 255, 255);
+    doc.text("Dopo il finanziamento (Anno " + (anniFinanziamento + 1) + "+): risparmio netto " + euro(year11.risparmio_netto_eur) + "/anno", margin + 10, y);
+  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // PAGE 6: Terms & Contact

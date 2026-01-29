@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=7" />
+    <link rel="stylesheet" href="./styles.css?v=12" />
   </head>
   <body>
     <div class="app">
@@ -43,6 +43,20 @@
         <!-- Left Panel: Inputs -->
         <aside class="input-panel">
           <form id="calcForm" class="calc-form" autocomplete="off">
+
+            <!-- Section: Tipo Cliente -->
+            <div class="client-type-selector" id="clientTypeSelector">
+              <div class="client-type-options">
+                <label class="client-type-option">
+                  <input type="radio" name="clientType" value="residenziale" checked />
+                  <span class="client-type-text">Residenziale</span>
+                </label>
+                <label class="client-type-option">
+                  <input type="radio" name="clientType" value="aziendale" />
+                  <span class="client-type-text">Aziendale</span>
+                </label>
+              </div>
+            </div>
 
             <!-- Section: Consumi -->
             <details class="input-section" open>
@@ -86,6 +100,22 @@
                 <div class="field">
                   <label for="modello_impianto">Modello impianto</label>
                   <select id="modello_impianto"></select>
+                </div>
+                <div class="field-row aziendale-only" id="customPotenzaFields" style="display:none">
+                  <div class="field">
+                    <label for="potenza_kw_manuale">Potenza impianto</label>
+                    <div class="input-with-unit">
+                      <input id="potenza_kw_manuale" type="number" step="0.1" min="0.1" value="6" />
+                      <span class="unit">kW</span>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="accumulo_kwh_manuale">Accumulo batterie</label>
+                    <div class="input-with-unit">
+                      <input id="accumulo_kwh_manuale" type="number" step="0.1" min="0" value="0" />
+                      <span class="unit">kWh</span>
+                    </div>
+                  </div>
                 </div>
                 <div class="field">
                   <label for="piano_rate_mesi">Piano rate</label>
@@ -254,88 +284,194 @@
           </form>
         </aside>
 
-        <!-- Right Panel: Results -->
+        <!-- Right Panel: Results Dashboard -->
         <section class="results-panel">
 
-          <!-- Hero: Main Savings Display -->
-          <div class="hero-result">
-            <div class="hero-label">Il tuo risparmio annuo</div>
-            <div class="hero-value" id="delta">
-              <span class="hero-currency">€</span>
-              <span class="hero-number">—</span>
-            </div>
-            <div class="hero-message" id="messaggio">Inserisci i dati per calcolare</div>
-            <div class="hero-comparison">
-              <div class="comparison-item">
-                <span class="comparison-label">Spesa attuale</span>
-                <span class="comparison-value" id="spesa_attuale">—</span>
+          <!-- Section 1: Il Confronto (Before/After Cards) -->
+          <div class="comparison-cards">
+            <!-- Card PRIMA -->
+            <div class="compare-card card-before">
+              <div class="card-header-bar bar-red"></div>
+              <div class="card-title">
+                <span class="card-icon">⏱</span>
+                <span>PRIMA (OGGI)</span>
               </div>
-              <div class="comparison-arrow">→</div>
-              <div class="comparison-item">
-                <span class="comparison-label">Costo netto</span>
-                <span class="comparison-value" id="costo_netto">—</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Stats Cards -->
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-icon">💰</div>
-              <div class="stat-content">
-                <div class="stat-value" id="rata">—</div>
-                <div class="stat-label">Rata annua</div>
-              </div>
-            </div>
-            <div class="stat-card stat-positive">
-              <div class="stat-icon">🏛️</div>
-              <div class="stat-content">
-                <div class="stat-value" id="detrazione">—</div>
-                <div class="stat-label">Detrazione fiscale</div>
-              </div>
-            </div>
-            <div class="stat-card stat-positive">
-              <div class="stat-icon">⚡</div>
-              <div class="stat-content">
-                <div class="stat-value" id="risparmio">—</div>
-                <div class="stat-label">Risparmio bolletta</div>
-              </div>
-            </div>
-            <div class="stat-card stat-positive">
-              <div class="stat-icon">🔌</div>
-              <div class="stat-content">
-                <div class="stat-value" id="ricavo_gse">—</div>
-                <div class="stat-label">Ricavo GSE</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Charts Section -->
-          <div class="charts-section">
-            <div class="chart-container chart-breakdown">
-              <div class="chart-header">
-                <h3>Composizione Costi/Benefici</h3>
-              </div>
-              <div class="chart-body">
-                <canvas id="pieBreakdown"></canvas>
-                <div class="chart-legend" id="pieLegend"></div>
-              </div>
-            </div>
-
-            <div class="chart-container chart-cashflow">
-              <div class="chart-header">
-                <h3>Proiezione 25 Anni</h3>
-                <div class="chart-badge" id="anno11Badge">
-                  <span class="badge-label">Dopo finanziamento:</span>
-                  <span class="badge-value" id="anno11">—</span>
+              <div class="card-body">
+                <div class="card-label">SPESA ENERGETICA TOTALE</div>
+                <div class="card-big-value">
+                  <span class="currency">€</span>
+                  <span class="value" id="spesaTotaleAnno">—</span>
+                  <span class="period">/anno</span>
+                </div>
+                <div class="card-details">
+                  <div class="detail-row">
+                    <span>Bolletta Media Mensile</span>
+                    <span class="detail-amount" id="bollettaMensile">—</span>
+                  </div>
+                  <div class="detail-row">
+                    <span>Emissione CO2</span>
+                    <span class="detail-amount" id="emissioneCO2">—</span>
+                  </div>
                 </div>
               </div>
-              <div class="chart-body">
+            </div>
+
+            <!-- Card DOPO -->
+            <div class="compare-card card-after">
+              <div class="card-header-bar bar-green"></div>
+              <div class="card-title">
+                <span class="card-icon">✨</span>
+                <span>DOPO (CON SOLARE)</span>
+              </div>
+              <div class="card-body">
+                <div class="card-label">NUOVA SPESA NETTA</div>
+                <div class="card-value-row">
+                  <div class="card-big-value green">
+                    <span class="currency">€</span>
+                    <span class="value" id="nuovaSpesaAnno">—</span>
+                    <span class="period">/anno</span>
+                  </div>
+                  <div class="savings-badge" id="savingsBadge">
+                    <span id="savingsPercent">-0%</span>
+                  </div>
+                </div>
+                <div class="stacked-bar">
+                  <div class="stacked-segment segment-risparmio" id="segmentRisparmio"></div>
+                  <div class="stacked-segment segment-gse" id="segmentGse"></div>
+                  <div class="stacked-segment segment-detrazione" id="segmentDetrazione"></div>
+                  <div class="stacked-segment segment-rata" id="segmentRata"></div>
+                </div>
+                <div class="breakdown-list">
+                  <div class="breakdown-row positive">
+                    <span class="dot green"></span>
+                    <span class="breakdown-label">Risparmio Reale in Bolletta</span>
+                    <span class="breakdown-amount green" id="risparmioReale">+ € —</span>
+                  </div>
+                  <div class="breakdown-row positive">
+                    <span class="dot amber"></span>
+                    <span class="breakdown-label">Guadagno dalla vendita (GSE)</span>
+                    <span class="breakdown-amount amber" id="guadagnoGSE">+ € —</span>
+                  </div>
+                  <div class="breakdown-row positive" id="detrazioneRow">
+                    <span class="dot blue"></span>
+                    <span class="breakdown-label">Detrazione Fiscale (50%)</span>
+                    <span class="breakdown-amount blue" id="detrazioneFiscale">+ € —</span>
+                  </div>
+                  <div class="breakdown-row negative">
+                    <span class="dot red"></span>
+                    <span class="breakdown-label">Rata del prestito</span>
+                    <span class="breakdown-amount red" id="rataPrestito">- € —</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Bilancio Netto Status Bar -->
+          <div class="status-bar-card">
+            <div class="status-left">
+              <div class="status-title">BILANCIO ANNUALE NETTO</div>
+              <div class="status-indicator">
+                <span>Status:</span>
+                <span class="status-value" id="statusValue">IN ATTIVO</span>
+              </div>
+            </div>
+            <div class="status-center">
+              <div class="status-scale">
+                <span class="scale-label negative">- €500 (PASSIVO)</span>
+                <span class="scale-label neutral">PAREGGIO</span>
+                <span class="scale-label positive">+ €500 (ATTIVO)</span>
+              </div>
+              <div class="status-track">
+                <div class="status-track-negative"></div>
+                <div class="status-track-positive"></div>
+                <div class="status-cursor" id="statusCursor"></div>
+              </div>
+            </div>
+            <div class="status-right">
+              <div class="status-result-label">GUADAGNO ANNUALE</div>
+              <div class="status-result-value" id="guadagnoAnnuale">+ € —</div>
+            </div>
+          </div>
+
+          <!-- Section 3: Detail Charts -->
+          <div class="detail-charts">
+            <!-- Left: Waterfall Flow Chart -->
+            <div class="detail-card">
+              <h3 class="detail-title">Dettaglio Flussi Annuali</h3>
+              <div class="waterfall-chart">
+                <div class="waterfall-row">
+                  <span class="waterfall-label">BOLLETTA<br>ATTUALE</span>
+                  <div class="waterfall-bar-container">
+                    <div class="waterfall-bar bar-red" id="wfBolletta">
+                      <span class="waterfall-value" id="wfBollettaVal">€ —</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="waterfall-row">
+                  <span class="waterfall-label">RISPARMIO<br>REALE</span>
+                  <div class="waterfall-bar-container">
+                    <div class="waterfall-bar bar-green" id="wfRisparmio">
+                      <span class="waterfall-value" id="wfRisparmioVal">- € —</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="waterfall-row">
+                  <span class="waterfall-label">RICAVO GSE</span>
+                  <div class="waterfall-bar-container">
+                    <div class="waterfall-bar bar-green-dark" id="wfGSE">
+                      <span class="waterfall-value" id="wfGSEVal">- € —</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="waterfall-row" id="wfDetrazioneRow">
+                  <span class="waterfall-label">DETRAZIONE<br>FISCALE</span>
+                  <div class="waterfall-bar-container">
+                    <div class="waterfall-bar bar-blue" id="wfDetrazione">
+                      <span class="waterfall-value" id="wfDetrazioneVal">- € —</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="waterfall-row">
+                  <span class="waterfall-label">RATA PRESTITO</span>
+                  <div class="waterfall-bar-container">
+                    <div class="waterfall-bar bar-orange" id="wfRata">
+                      <span class="waterfall-value" id="wfRataVal">+ € —</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="waterfall-row waterfall-result">
+                  <span class="waterfall-label">NUOVA SPESA</span>
+                  <div class="waterfall-bar-container">
+                    <div class="waterfall-bar bar-black" id="wfNuova">
+                      <span class="waterfall-value" id="wfNuovaVal">€ —</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Investment Return Chart -->
+            <div class="detail-card">
+              <div class="detail-header">
+                <h3 class="detail-title">Rientro dell'Investimento</h3>
+                <div class="breakeven-badge" id="breakevenBadge">
+                  PUNTO DI PAREGGIO: <strong id="breakevenYear">ANNO —</strong>
+                </div>
+              </div>
+              <div class="detail-subtitle">Proiezione cumulata su 25 anni</div>
+              <div class="investment-chart">
                 <canvas id="cashflowChart"></canvas>
               </div>
-              <div class="chart-footer">
-                <span class="legend-dot positive"></span> Risparmio
-                <span class="legend-dot negative"></span> Costo
+              <div class="investment-summary">
+                <div class="summary-card green">
+                  <div class="summary-label">GUADAGNO FINALE (25 ANNI)</div>
+                  <div class="summary-value" id="guadagno25Anni">+ € —</div>
+                </div>
+                <div class="summary-card">
+                  <div class="summary-label">RENDIMENTO MEDIO ANNUO</div>
+                  <div class="summary-value" id="rendimentoAnnuo">—%</div>
+                </div>
               </div>
             </div>
           </div>
@@ -367,7 +503,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- pdf-lib for PDF merging -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-    <script src="./app.js?v=20"></script>
+    <script src="./app.js?v=30"></script>
 
     <!-- Service Worker Registration -->
     <script>

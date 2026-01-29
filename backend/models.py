@@ -36,6 +36,7 @@ class CalcRequest(BaseModel):
 class CashflowYear(BaseModel):
     anno: int = Field(..., ge=1)
     costo_netto_eur: float
+    risparmio_netto_eur: float
 
 
 class CalcResponse(BaseModel):
@@ -48,5 +49,8 @@ class CalcResponse(BaseModel):
     ricavo_gse_eur: float
     costo_netto_annuo_eur: float
     delta_vs_spesa_attuale_eur: float
+    bolletta_residua_eur: float
+    risparmio_netto_eur: float
+    spesa_nuova_totale_eur: float
     messaggio: str
     cashflow_anni: list[CashflowYear]
