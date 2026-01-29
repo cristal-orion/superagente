@@ -18,7 +18,7 @@ services:
       - CATALOG_PATH=/app/data/catalog.json
     networks:
       - pv-network
-      - reminor-network
+      - reminor_reminor_network
 
   frontend:
     build:
@@ -32,10 +32,10 @@ services:
       - backend
     networks:
       - pv-network
-      - reminor-network
+      - reminor_reminor_network
 
 networks:
   pv-network:
     driver: bridge
-  reminor-network:
+  reminor_reminor_network:
     external: true
