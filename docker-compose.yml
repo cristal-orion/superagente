@@ -18,7 +18,6 @@ services:
       - CATALOG_PATH=/app/data/catalog.json
     networks:
       - pv-network
-      - reminor_reminor_network
 
   frontend:
     build:
