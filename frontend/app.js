@@ -812,7 +812,7 @@ function onClientTypeChange(newType) {
   if (detrazioneField) detrazioneField.classList.toggle('deduction-fields-hidden', isAziendale);
   if (anniField) anniField.classList.toggle('deduction-fields-hidden', isAziendale);
 
-  // Toggle aziendale-only fields (description + potenza manuale)
+  // Toggle aziendale-only fields (if any remain)
   document.querySelectorAll('.aziendale-only').forEach(el => {
     el.style.display = isAziendale ? '' : 'none';
   });
@@ -1547,7 +1547,7 @@ function bind() {
     }
 
     // Auto-calculate production from manual potenza kW
-    if (id === 'potenza_kw_manuale' && clientType === 'aziendale' && !selectedOffer) {
+    if (id === 'potenza_kw_manuale' && !selectedOffer) {
       const kw = Number(document.getElementById('potenza_kw_manuale').value);
       if (Number.isFinite(kw) && kw > 0) {
         setValue('produzione_annua_kwh', Math.round(kw * KWH_PER_KW_PER_YEAR));
@@ -1660,7 +1660,7 @@ function initManualQuoteModal() {
         }
       }
       updateManualSummary();
-    } else if (clientType === 'aziendale') {
+    } else if (!selectedOffer) {
       // No catalog selection: build virtual system from manual fields
       const potenza = Number(document.getElementById('potenza_kw_manuale')?.value) || 0;
       const accumulo = Number(document.getElementById('accumulo_kwh_manuale')?.value) || 0;
@@ -1670,7 +1670,7 @@ function initManualQuoteModal() {
       if (accumulo > 0) label += ` + ${accumulo} kWh acc`;
 
       const virtualSystem = {
-        id: '_custom_aziendale',
+        id: '_custom_' + clientType,
         category: 'Personalizzato',
         label,
         potenza_kw: potenza,
