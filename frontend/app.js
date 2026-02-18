@@ -2209,7 +2209,7 @@ async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, cl
     doc.text("Importo Totale:", margin + 18, y + 12);
 
     setFont("bold", 20);
-    doc.setTextColor(196, 30, 58);
+    doc.setTextColor(16, 185, 129);
     doc.text(euro(totalPrice) + " " + ivaLabel, margin + 18, y + 24);
 
     y += 40;
