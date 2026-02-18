@@ -62,7 +62,7 @@ const Calculator = {
     capitaleFinanziato = Math.max(capitaleFinanziato, 0.0);
 
     let rataAnnua;
-    if (capitaleFinanziato === 0) {
+    if (capitaleFinanziato === 0 || request.anni_finanziamento <= 0) {
       rataAnnua = 0.0;
     } else if (request.rata_mensile_override_eur !== null && request.rata_mensile_override_eur > 0) {
       rataAnnua = request.rata_mensile_override_eur * 12.0;
@@ -1014,6 +1014,11 @@ function render(response) {
   const rata = response.rata_annua_impianto_eur;
   const detrazione = response.detrazione_annua_eur;
 
+  // Detect cash purchase (no financing)
+  const anniFinanziamento = Math.trunc(numberValue("anni_finanziamento"));
+  const costoImpianto = numberValue("costo_impianto_eur");
+  const isContanti = anniFinanziamento <= 0 && costoImpianto > 0;
+
   // Calculate percentage savings
   const percentSaved = spesaAttuale > 0 ? Math.round((Math.abs(risparmioNetto) / spesaAttuale) * 100) : 0;
 
@@ -1123,12 +1128,18 @@ function render(response) {
   // ═══════════════════════════════════════════════════════════════════════════
 
   // Calculate breakeven year
-  let cumulative = 0;
-  let breakevenYear = 25;
-  for (const year of response.cashflow_anni) {
-    cumulative += year.risparmio_netto_eur;
-    if (cumulative > 0 && breakevenYear === 25) {
-      breakevenYear = year.anno;
+  let breakevenYear;
+  if (isContanti && risparmioNetto > 0) {
+    // Real payback: years to recover upfront investment via annual savings
+    breakevenYear = Math.min(Math.ceil(costoImpianto / risparmioNetto), 25);
+  } else {
+    let cumulative = 0;
+    breakevenYear = 25;
+    for (const year of response.cashflow_anni) {
+      cumulative += year.risparmio_netto_eur;
+      if (cumulative > 0 && breakevenYear === 25) {
+        breakevenYear = year.anno;
+      }
     }
   }
   document.getElementById("breakevenYear").textContent = "ANNO " + breakevenYear;
@@ -1138,7 +1149,6 @@ function render(response) {
   document.getElementById("guadagno25Anni").textContent = (total25 >= 0 ? "+ " : "- ") + euro(Math.abs(total25));
 
   // Calculate average annual return (rough estimate)
-  const costoImpianto = parseFloat(document.getElementById("costo_impianto_eur").value) || 12000;
   const rendimento = costoImpianto > 0 ? ((total25 / costoImpianto) / 25 * 100).toFixed(1) : 0;
   document.getElementById("rendimentoAnnuo").textContent = rendimento + "%";
 
@@ -1383,13 +1393,16 @@ function drawCashflowBars(canvas, cashflowYears) {
 
 function drawCharts(response) {
   const canvas = document.getElementById("cashflowChart");
+  const _anni = Math.trunc(numberValue("anni_finanziamento"));
+  const _costo = numberValue("costo_impianto_eur");
+  const initialCost = (_anni <= 0 && _costo > 0) ? _costo : 0;
 
   // Draw cumulative investment return chart
-  drawInvestmentChart(canvas, response.cashflow_anni || []);
+  drawInvestmentChart(canvas, response.cashflow_anni || [], initialCost);
 }
 
 // Draw cumulative savings chart (area chart style)
-function drawInvestmentChart(canvas, cashflowYears) {
+function drawInvestmentChart(canvas, cashflowYears, initialCost = 0) {
   if (!canvas || !cashflowYears.length) return;
 
   const ctx = canvas.getContext("2d");
@@ -1402,8 +1415,8 @@ function drawInvestmentChart(canvas, cashflowYears) {
   canvas.height = h * ratio;
   ctx.scale(ratio, ratio);
 
-  // Calculate cumulative values
-  let cumulative = 0;
+  // Calculate cumulative values (start at -initialCost for cash purchases)
+  let cumulative = -initialCost;
   const cumulativeData = cashflowYears.map(y => {
     cumulative += y.risparmio_netto_eur;
     return { anno: y.anno, value: cumulative };

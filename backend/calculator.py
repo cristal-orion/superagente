@@ -53,7 +53,7 @@ def calc_response(request: CalcRequest) -> CalcResponse:
     )
     capitale_finanziato = max(capitale_finanziato, 0.0)
 
-    if capitale_finanziato == 0:
+    if capitale_finanziato == 0 or request.anni_finanziamento <= 0:
         rata_annua = 0.0
     elif request.rata_mensile_override_eur is not None and request.rata_mensile_override_eur > 0:
         rata_annua = request.rata_mensile_override_eur * 12.0
