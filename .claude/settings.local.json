@@ -9,7 +9,15 @@
       "mcp__plugin_playwright_playwright__browser_wait_for",
       "mcp__plugin_playwright_playwright__browser_select_option",
       "mcp__plugin_playwright_playwright__browser_handle_dialog",
-      "mcp__plugin_playwright_playwright__browser_take_screenshot"
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "Bash(docker ps:*)",
+      "Bash(docker compose build:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(docker exec:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoxNzcxNDYzMDA1fQ.M7Qat6jIxm8byRf8uTd2OthGViyQGBauKCHCOYV7RFY\")",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "mcp__plugin_playwright_playwright__browser_fill_form"
     ]
   }
 }

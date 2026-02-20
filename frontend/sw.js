@@ -2,7 +2,7 @@
 // Service Worker - PV Sales Calculator PWA
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME = 'pv-calculator-v7';
+const CACHE_NAME = 'pv-calculator-v9';
 const DATASHEETS_CACHE = 'pv-datasheets-v1';
 
 // Files to cache for offline use
@@ -122,8 +122,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip other API calls (upload, delete, catalog import) - these need network
-  if (url.pathname.includes('/datasheets') || url.pathname.includes('/calc') || url.pathname.includes('/catalog/import')) {
+  // Skip all API calls - these always need fresh data from the network
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/catalog/') || url.pathname.includes('/datasheets') || url.pathname.includes('/calc')) {
     event.respondWith(
       fetch(event.request).catch(() => {
         return new Response(JSON.stringify({ error: 'Offline - funzionalità non disponibile' }), {

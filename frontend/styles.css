@@ -2062,6 +2062,8 @@ input[type="number"] {
 }
 
 .catalog-actions {
+  display: flex;
+  gap: var(--space-sm);
   margin-bottom: var(--space-md);
 }
 

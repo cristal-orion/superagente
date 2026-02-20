@@ -12,10 +12,17 @@ services:
       - ./data/datasheets:/app/datasheets
       # Catalog file (shared with frontend build)
       - ./data/catalog.json:/app/data/catalog.json
+      # SQLite database (persistent)
+      - pv_data:/app/db
     environment:
       - PYTHONUNBUFFERED=1
       - DATASHEETS_DIR=/app/datasheets
       - CATALOG_PATH=/app/data/catalog.json
+      - DATA_DIR=/app/db
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-in-production}
+      - SUPERADMIN_EMAIL=${SUPERADMIN_EMAIL:-admin@example.com}
+      - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:-changeme}
+      - SUPERADMIN_AGENCY=${SUPERADMIN_AGENCY:-Admin}
     networks:
       - pv-network
 
@@ -27,6 +34,9 @@ services:
     restart: unless-stopped
     ports:
       - "8081:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - backend
     networks:
@@ -38,3 +48,7 @@ networks:
     driver: bridge
   reminor_reminor_network:
     external: true
+
+volumes:
+  pv_data:
+    driver: local

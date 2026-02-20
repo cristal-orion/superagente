@@ -5,9 +5,10 @@ import os
 from io import BytesIO
 from pathlib import Path
 
-from fastapi import FastAPI, UploadFile, Form, HTTPException
+from fastapi import FastAPI, UploadFile, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -24,8 +25,6 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 # Catalog configuration (use env var for Docker, fallback for local dev)
 CATALOG_PATH = Path(os.environ.get("CATALOG_PATH", Path(__file__).parent.parent / "frontend" / "catalog.json"))
-RATE_TERMS = ["60", "72", "84", "120"]  # Possible financing terms in months
-
 # Ensure datasheets directories exist
 for category in VALID_CATEGORIES:
     (DATASHEETS_DIR / category).mkdir(parents=True, exist_ok=True)
@@ -42,6 +41,57 @@ app.add_middleware(
 )
 
 
+# ─── Startup: init DB and seed ────────────────────────────────────────────────
+
+@app.on_event("startup")
+def on_startup() -> None:
+    from database import init_db, SessionLocal, engine
+    from auth import seed_superadmin
+    from sqlalchemy import text
+    init_db()
+    # Migration: add listino_data column if it doesn't exist yet
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE listini ADD COLUMN listino_data TEXT"))
+            conn.commit()
+    except Exception:
+        pass  # Column already exists
+    # Migration: add plain_password column to users if it doesn't exist yet
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN plain_password TEXT"))
+            conn.commit()
+    except Exception:
+        pass  # Column already exists
+    db = SessionLocal()
+    try:
+        seed_superadmin(db)
+    finally:
+        db.close()
+
+
+# ─── Include routers ──────────────────────────────────────────────────────────
+
+from routes.auth import router as auth_router
+from routes.users import router as users_router
+from routes.listini import router as listini_router
+
+app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(listini_router)
+
+
+# ─── Catalog helpers ──────────────────────────────────────────────────────────
+
+def load_catalog_json() -> dict:
+    if CATALOG_PATH.exists():
+        with open(CATALOG_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"version": "default", "items": []}
+
+
+# ─── Core endpoints ───────────────────────────────────────────────────────────
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -50,6 +100,122 @@ def health() -> dict[str, str]:
 @app.post("/calc", response_model=CalcResponse)
 def calc(request: CalcRequest) -> CalcResponse:
     return calc_response(request)
+
+
+# ─── Catalog user endpoint ────────────────────────────────────────────────────
+
+_optional_bearer = HTTPBearer(auto_error=False)
+
+
+@app.get("/catalog/me")
+async def catalog_for_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
+):
+    """Return catalog filtered by user's assigned listini, or default if no auth."""
+    if not credentials:
+        return JSONResponse(load_catalog_json())
+
+    try:
+        from database import SessionLocal
+        from auth import decode_token
+        from models_db import User, ListinoAccess, Listino
+        from jose import JWTError
+
+        payload = decode_token(credentials.credentials)
+        user_id = int(payload.get("sub", 0))
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+            if not user:
+                return JSONResponse(load_catalog_json())
+
+            items = []
+            seen_ids: set[str] = set()
+
+            # All users (superadmin and agents) see only assigned listini
+            assigned = db.query(ListinoAccess).filter(ListinoAccess.user_id == user_id).all()
+            for access in assigned:
+                listino = db.query(Listino).filter(Listino.id == access.listino_id).first()
+                if listino:
+                    for item in listino.get_items():
+                        item_id = item.get("id", "")
+                        if item_id not in seen_ids:
+                            seen_ids.add(item_id)
+                            items.append(item)
+
+            if not items:
+                return JSONResponse(load_catalog_json())
+
+            return JSONResponse({"version": "user-custom", "items": items})
+        finally:
+            db.close()
+
+    except Exception:
+        return JSONResponse(load_catalog_json())
+
+
+# ─── Populate listino from catalog.json ────────────────────────────────────────
+
+from sqlalchemy.orm import Session as _Session
+from database import get_db as _get_db
+from auth import require_superadmin as _require_superadmin
+
+
+@app.post("/api/listini/{listino_id}/populate-from-catalog")
+async def populate_listino_from_catalog(
+    listino_id: int,
+    db: _Session = Depends(_get_db),
+    _admin=Depends(_require_superadmin),
+) -> dict:
+    """Copy all items from catalog.json into catalog_items AND listino_data (editor sections)."""
+    import uuid as _uuid_mod
+    from collections import OrderedDict as _OD
+    from models_db import Listino as _Listino
+    listino = db.query(_Listino).filter(_Listino.id == listino_id).first()
+    if not listino:
+        raise HTTPException(status_code=404, detail="Listino non trovato")
+    catalog = load_catalog_json()
+    items = catalog.get("items", [])
+    if not items:
+        raise HTTPException(status_code=400, detail="Il catalogo corrente è vuoto")
+
+    # 1. Save catalog_items (used by calculator for agents)
+    listino.set_items(items)
+
+    # 2. Build listino_data sections (used by the visual editor)
+    categories: dict = _OD()
+    for item in items:
+        cat = item.get("category", "Altro")
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(item)
+
+    sections = []
+    for cat_title, cat_items in categories.items():
+        columns = ["Configurazione", "kW", "kWh acc.", "Prezzo €"]
+
+        rows = []
+        for item in cat_items:
+            row = [
+                item.get("label", ""),
+                str(item.get("potenza_kw", "")),
+                str(int(item.get("accumulo_kwh", 0)) if item.get("accumulo_kwh", 0) == int(item.get("accumulo_kwh", 0)) else item.get("accumulo_kwh", 0)),
+                str(int(item.get("prezzo_eur", 0)) if item.get("prezzo_eur", 0) == int(item.get("prezzo_eur", 0)) else item.get("prezzo_eur", 0)),
+            ]
+            rows.append(row)
+
+        sections.append({
+            "id": "sec" + _uuid_mod.uuid4().hex[:8],
+            "title": cat_title,
+            "notes": "",
+            "columns": columns,
+            "rows": rows,
+        })
+
+    listino.set_listino_data({"sections": sections})
+    db.commit()
+    return {"status": "ok", "items_copied": len(items)}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -164,15 +330,67 @@ def delete_datasheet(category: str, filename: str) -> dict:
 # Catalog Excel Export/Import Endpoints
 # ═══════════════════════════════════════════════════════════════════════════
 
-@app.get("/catalog/export")
-def export_catalog_excel():
-    """Export the catalog as an Excel file for editing."""
-    if not CATALOG_PATH.exists():
-        raise HTTPException(status_code=404, detail="Catalog file not found")
+def _get_user_catalog_items(credentials) -> tuple[list[dict], str]:
+    """Return (items, listino_name) for the authenticated user's assigned listini.
 
-    # Load catalog
-    with open(CATALOG_PATH, "r", encoding="utf-8") as f:
-        catalog = json.load(f)
+    Falls back to catalog.json if no auth or no assigned listini.
+    """
+    if not credentials:
+        catalog = load_catalog_json()
+        return catalog.get("items", []), catalog.get("version", "export")
+
+    try:
+        from database import SessionLocal
+        from auth import decode_token
+        from models_db import User, ListinoAccess, Listino
+
+        payload = decode_token(credentials.credentials)
+        user_id = int(payload.get("sub", 0))
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+            if not user:
+                catalog = load_catalog_json()
+                return catalog.get("items", []), catalog.get("version", "export")
+
+            items: list[dict] = []
+            seen_ids: set[str] = set()
+            listino_name = ""
+
+            assigned = db.query(ListinoAccess).filter(ListinoAccess.user_id == user_id).all()
+            for access in assigned:
+                listino = db.query(Listino).filter(Listino.id == access.listino_id).first()
+                if listino:
+                    if not listino_name:
+                        listino_name = listino.name
+                    for item in listino.get_items():
+                        item_id = item.get("id", "")
+                        if item_id not in seen_ids:
+                            seen_ids.add(item_id)
+                            items.append(item)
+
+            if not items:
+                catalog = load_catalog_json()
+                return catalog.get("items", []), catalog.get("version", "export")
+
+            return items, listino_name or "listino"
+        finally:
+            db.close()
+    except Exception:
+        catalog = load_catalog_json()
+        return catalog.get("items", []), catalog.get("version", "export")
+
+
+@app.get("/catalog/export")
+def export_catalog_excel(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
+):
+    """Export the user's assigned listino as an Excel file."""
+    items, listino_name = _get_user_catalog_items(credentials)
+
+    if not items:
+        raise HTTPException(status_code=404, detail="Nessun listino trovato")
 
     # Create workbook
     wb = Workbook()
@@ -181,9 +399,7 @@ def export_catalog_excel():
 
     # Define headers
     headers = [
-        "ID", "Categoria", "Label", "Potenza (kW)", "Accumulo (kWh)", "Fase",
-        "Prezzo (EUR)", "Rata 60 mesi", "Rata 72 mesi", "Rata 84 mesi", "Rata 120 mesi",
-        "TAEG 60 mesi", "TAEG 72 mesi", "TAEG 84 mesi", "TAEG 120 mesi"
+        "ID", "Categoria", "Label", "Potenza (kW)", "Accumulo (kWh)", "Prezzo (EUR)"
     ]
 
     # Style settings
@@ -206,26 +422,14 @@ def export_catalog_excel():
         cell.border = thin_border
 
     # Write data rows
-    for row_idx, item in enumerate(catalog.get("items", []), 2):
-        rate_mensili = item.get("rate_mensili_eur", {})
-        taeg = item.get("taeg_annuo_percent_by_term", {})
-
+    for row_idx, item in enumerate(items, 2):
         row_data = [
             item.get("id", ""),
             item.get("category", ""),
             item.get("label", ""),
             item.get("potenza_kw", 0),
             item.get("accumulo_kwh", 0),
-            item.get("fase", ""),
             item.get("prezzo_eur", 0),
-            rate_mensili.get("60", ""),
-            rate_mensili.get("72", ""),
-            rate_mensili.get("84", ""),
-            rate_mensili.get("120", ""),
-            taeg.get("60", ""),
-            taeg.get("72", ""),
-            taeg.get("84", ""),
-            taeg.get("120", ""),
         ]
 
         for col, value in enumerate(row_data, 1):
@@ -235,39 +439,113 @@ def export_catalog_excel():
                 cell.alignment = Alignment(horizontal="right")
 
     # Set column widths
-    column_widths = [20, 40, 20, 12, 14, 8, 14, 12, 12, 12, 12, 12, 12, 12, 12]
+    column_widths = [20, 40, 20, 12, 14, 14]
     for col, width in enumerate(column_widths, 1):
         ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
 
     # Freeze header row
     ws.freeze_panes = "A2"
 
-    # Add metadata sheet
-    ws_meta = wb.create_sheet("Info")
-    ws_meta["A1"] = "Versione Listino:"
-    ws_meta["B1"] = catalog.get("version", "")
-    ws_meta["A2"] = "PDF Sorgente:"
-    ws_meta["B2"] = catalog.get("source_pdf", "")
-    ws_meta["A4"] = "ISTRUZIONI:"
-    ws_meta["A5"] = "1. Modifica i prezzi e le rate nella scheda 'Listino'"
-    ws_meta["A6"] = "2. Non modificare la colonna ID"
-    ws_meta["A7"] = "3. Puoi aggiungere nuove righe copiando il formato esistente"
-    ws_meta["A8"] = "4. Salva il file e ricaricalo nell'applicazione"
-    ws_meta.column_dimensions["A"].width = 25
-    ws_meta.column_dimensions["B"].width = 50
-
     # Save to bytes
     output = BytesIO()
     wb.save(output)
     output.seek(0)
 
-    # Get version for filename
-    version = catalog.get("version", "export").replace(" ", "_")
-    filename = f"listino_{version}.xlsx"
+    safe_name = listino_name.replace(" ", "_")
+    filename = f"listino_{safe_name}.xlsx"
 
     return StreamingResponse(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@app.get("/catalog/export-pdf")
+def export_catalog_pdf(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
+):
+    """Export the user's assigned listino as a PDF file."""
+    from fpdf import FPDF
+
+    items, listino_name = _get_user_catalog_items(credentials)
+
+    if not items:
+        raise HTTPException(status_code=404, detail="Nessun listino trovato")
+
+    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    # Title
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_text_color(196, 30, 58)  # brand red
+    pdf.cell(0, 12, f"Listino: {listino_name}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+
+    # Table header
+    col_widths = [50, 70, 55, 30, 35, 35]
+    col_headers = ["ID", "Categoria", "Label", "kW", "Accumulo kWh", "Prezzo EUR"]
+
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_fill_color(196, 30, 58)
+    pdf.set_text_color(255, 255, 255)
+    for i, header in enumerate(col_headers):
+        pdf.cell(col_widths[i], 9, header, border=1, fill=True, align="C")
+    pdf.ln()
+
+    # Table rows
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(30, 30, 30)
+    fill = False
+    for item in items:
+        if pdf.get_y() > 180:
+            pdf.add_page()
+            # Re-draw header on new page
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_fill_color(196, 30, 58)
+            pdf.set_text_color(255, 255, 255)
+            for i, header in enumerate(col_headers):
+                pdf.cell(col_widths[i], 9, header, border=1, fill=True, align="C")
+            pdf.ln()
+            pdf.set_font("Helvetica", "", 9)
+            pdf.set_text_color(30, 30, 30)
+            fill = False
+
+        if fill:
+            pdf.set_fill_color(245, 245, 245)
+        else:
+            pdf.set_fill_color(255, 255, 255)
+
+        potenza = item.get("potenza_kw", 0)
+        accumulo = item.get("accumulo_kwh", 0)
+        prezzo = item.get("prezzo_eur", 0)
+
+        pdf.cell(col_widths[0], 8, str(item.get("id", "")), border=1, fill=True)
+        pdf.cell(col_widths[1], 8, str(item.get("category", "")), border=1, fill=True)
+        pdf.cell(col_widths[2], 8, str(item.get("label", "")), border=1, fill=True)
+        pdf.cell(col_widths[3], 8, f"{potenza:.1f}", border=1, fill=True, align="R")
+        pdf.cell(col_widths[4], 8, f"{accumulo:.1f}", border=1, fill=True, align="R")
+        pdf.cell(col_widths[5], 8, f"{prezzo:,.0f}", border=1, fill=True, align="R")
+        pdf.ln()
+        fill = not fill
+
+    # Footer
+    pdf.ln(6)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_text_color(120, 120, 120)
+    pdf.cell(0, 6, f"Totale prodotti: {len(items)}", new_x="LMARGIN", new_y="NEXT")
+
+    output = BytesIO()
+    pdf.output(output)
+    output.seek(0)
+
+    safe_name = listino_name.replace(" ", "_")
+    filename = f"listino_{safe_name}.pdf"
+
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
@@ -314,16 +592,7 @@ async def import_catalog_excel(file: UploadFile):
         "label": headers.get("label"),
         "potenza_kw": headers.get("potenza (kw)"),
         "accumulo_kwh": headers.get("accumulo (kwh)"),
-        "fase": headers.get("fase"),
         "prezzo_eur": headers.get("prezzo (eur)"),
-        "rata_60": headers.get("rata 60 mesi"),
-        "rata_72": headers.get("rata 72 mesi"),
-        "rata_84": headers.get("rata 84 mesi"),
-        "rata_120": headers.get("rata 120 mesi"),
-        "taeg_60": headers.get("taeg 60 mesi"),
-        "taeg_72": headers.get("taeg 72 mesi"),
-        "taeg_84": headers.get("taeg 84 mesi"),
-        "taeg_120": headers.get("taeg 120 mesi"),
     }
 
     # Validate required columns exist
@@ -346,24 +615,6 @@ async def import_catalog_excel(file: UploadFile):
             continue
 
         try:
-            # Build rate_mensili_eur dict (only include non-empty values)
-            rate_mensili = {}
-            for term in ["60", "72", "84", "120"]:
-                col_key = f"rata_{term}"
-                if col_map.get(col_key):
-                    val = ws.cell(row=row, column=col_map[col_key]).value
-                    if val is not None and val != "":
-                        rate_mensili[term] = float(val)
-
-            # Build taeg dict (only include non-empty values)
-            taeg = {}
-            for term in ["60", "72", "84", "120"]:
-                col_key = f"taeg_{term}"
-                if col_map.get(col_key):
-                    val = ws.cell(row=row, column=col_map[col_key]).value
-                    if val is not None and val != "":
-                        taeg[term] = float(val)
-
             # Build item
             item = {
                 "id": str(id_val).strip(),
@@ -371,10 +622,7 @@ async def import_catalog_excel(file: UploadFile):
                 "label": str(ws.cell(row=row, column=col_map["label"]).value or "").strip(),
                 "potenza_kw": float(ws.cell(row=row, column=col_map["potenza_kw"]).value or 0),
                 "accumulo_kwh": float(ws.cell(row=row, column=col_map.get("accumulo_kwh", 0)).value or 0) if col_map.get("accumulo_kwh") else 0.0,
-                "fase": str(ws.cell(row=row, column=col_map.get("fase", 0)).value or "mono").strip() if col_map.get("fase") else "mono",
                 "prezzo_eur": float(ws.cell(row=row, column=col_map["prezzo_eur"]).value or 0),
-                "rate_mensili_eur": rate_mensili,
-                "taeg_annuo_percent_by_term": taeg,
             }
 
             items.append(item)
@@ -439,4 +687,3 @@ async def import_catalog_excel(file: UploadFile):
         result["warnings"] = errors
 
     return result
-

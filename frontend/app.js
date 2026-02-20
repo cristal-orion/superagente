@@ -156,7 +156,7 @@ function toggleTheme() {
 initTheme();
 
 const API_URL = "/calc";
-const CATALOG_URL = "./catalog.json";
+const CATALOG_URL = "/catalog/me";
 const ENERGY_PRICE_DEFAULT = 0.30;
 const KWH_PER_KW_PER_YEAR = 1650;
 
@@ -238,7 +238,6 @@ function setChecked(id, checked) {
 // ─── State ─────────────────────────────────────────────────────────────────
 let catalog = null;
 let selectedOffer = null;
-let selectedTermMonths = null;
 let lastResponse = null;
 let clientType = 'residenziale'; // 'residenziale' or 'aziendale'
 
@@ -623,24 +622,53 @@ document.addEventListener("DOMContentLoaded", initDatasheetSystem);
 // ═══════════════════════════════════════════════════════════════════════════
 
 const CATALOG_EXPORT_URL = "/catalog/export";
+const CATALOG_EXPORT_PDF_URL = "/catalog/export-pdf";
 const CATALOG_IMPORT_URL = "/catalog/import";
+
+async function downloadCatalogFile(url, fallbackName) {
+  showCatalogStatus("Scaricamento in corso...", "info");
+  try {
+    const res = await authFetch(url);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      showCatalogStatus(d.detail || "Errore nel download", "error");
+      return;
+    }
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename=(.+)/);
+    const filename = match ? match[1].replace(/"/g, "") : fallbackName;
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showCatalogStatus("", "");
+  } catch {
+    showCatalogStatus("Errore di connessione al server", "error");
+  }
+}
 
 function initCatalogManagement() {
   const downloadBtn = document.getElementById("downloadCatalogBtn");
+  const downloadPdfBtn = document.getElementById("downloadCatalogPdfBtn");
   const dropzone = document.getElementById("catalogDropzone");
   const fileInput = document.getElementById("catalogFileInput");
   const statusDiv = document.getElementById("catalogStatus");
 
   if (!downloadBtn || !dropzone || !fileInput) return;
 
-  // Download button
+  // Download Excel button
   downloadBtn.addEventListener("click", () => {
-    showCatalogStatus("Scaricamento in corso...", "info");
-    window.location.href = CATALOG_EXPORT_URL;
-    setTimeout(() => {
-      showCatalogStatus("", "");
-    }, 2000);
+    downloadCatalogFile(CATALOG_EXPORT_URL, "listino.xlsx");
   });
+
+  // Download PDF button
+  if (downloadPdfBtn) {
+    downloadPdfBtn.addEventListener("click", () => {
+      downloadCatalogFile(CATALOG_EXPORT_PDF_URL, "listino.pdf");
+    });
+  }
 
   // Dropzone click to trigger file input
   dropzone.addEventListener("click", () => {
@@ -738,7 +766,7 @@ document.addEventListener("DOMContentLoaded", initCatalogManagement);
 
 // ─── Catalog Loading ───────────────────────────────────────────────────────
 async function loadCatalog() {
-  const res = await fetch(CATALOG_URL, { cache: "no-store" });
+  const res = await authFetch(CATALOG_URL, { cache: "no-store" });
   if (!res.ok) throw new Error("catalog load failed");
   const data = await res.json();
   catalog = data?.items || [];
@@ -776,13 +804,7 @@ function groupByCategory(items) {
 
 // ─── Client Type Logic ────────────────────────────────────────────────────
 function filterCatalogItems(type) {
-  return (catalog || []).filter(item => {
-    const cat = (item.category || '').toLowerCase();
-    if (type === 'aziendale') {
-      return cat.includes('aziend') || cat.includes('industrial');
-    }
-    return cat.includes('residenzial');
-  });
+  return (catalog || []);
 }
 
 function onClientTypeChange(newType) {
@@ -826,8 +848,6 @@ function onClientTypeChange(newType) {
 
   // Reset selection
   selectedOffer = null;
-  selectedTermMonths = null;
-  populateTerms(null);
 
   // Re-initialize manual quote modal with filtered catalog
   selectedManualSystems = [];
@@ -870,68 +890,16 @@ function populateModels() {
   sel.addEventListener("change", () => {
     const id = sel.value;
     selectedOffer = (catalog || []).find((x) => x.id === id) || null;
-    selectedTermMonths = null;
-    populateTerms(selectedOffer);
     applySelectedOffer();
     debounceRecalc();
   });
 }
 
-function populateTerms(offer) {
-  const sel = document.getElementById("piano_rate_mesi");
-  sel.innerHTML = "";
-
-  if (!offer) {
-    sel.disabled = true;
-    return;
-  }
-
-  const terms = Object.keys(offer.rate_mensili_eur || {})
-    .map((x) => Number(x))
-    .filter((x) => Number.isFinite(x))
-    .sort((a, b) => a - b);
-
-  for (const months of terms) {
-    const opt = document.createElement("option");
-    opt.value = String(months);
-    const monthly = offer.rate_mensili_eur[String(months)];
-    const taeg = offer.taeg_annuo_percent_by_term?.[String(months)];
-    opt.textContent = `${months} mesi — ${euroMonthly(monthly)}/mese${taeg ? ` (TAEG ${taeg}%)` : ""}`;
-    sel.appendChild(opt);
-  }
-
-  sel.disabled = terms.length === 0;
-  if (terms.length > 0) {
-    selectedTermMonths = terms.includes(120) ? 120 : terms[0];
-    sel.value = String(selectedTermMonths);
-  }
-
-  sel.onchange = () => {
-    selectedTermMonths = Number(sel.value);
-    applySelectedOffer();
-    debounceRecalc();
-  };
-}
-
 function applySelectedOffer() {
-  // Note: populateTerms is called separately when model changes, not here
-  // to avoid resetting the dropdown when user changes the term
-
-  if (!selectedOffer || !selectedTermMonths) {
-    return;
-  }
+  if (!selectedOffer) return;
 
   setValue("costo_impianto_eur", selectedOffer.prezzo_eur);
   setValue("produzione_annua_kwh", selectedOffer.potenza_kw * KWH_PER_KW_PER_YEAR);
-
-  const years = selectedTermMonths / 12;
-  setValue("anni_finanziamento", years);
-
-  const taeg = selectedOffer.taeg_annuo_percent_by_term?.[String(selectedTermMonths)];
-  if (taeg && Number.isFinite(Number(taeg)) && Number(taeg) > 0) {
-    setChecked("usa_rata_semplice", false);
-    setValue("taeg_annuo_percent", taeg);
-  }
 
   // Auto-set autoconsumo to 80% when system has battery storage
   if (selectedOffer.accumulo_kwh && selectedOffer.accumulo_kwh > 0) {
@@ -940,8 +908,8 @@ function applySelectedOffer() {
 }
 
 function financedAmount() {
-  const price = selectedOffer ? Number(selectedOffer.prezzo_eur) : null;
-  if (!Number.isFinite(price)) return null;
+  const price = numberValue("costo_impianto_eur");
+  if (!Number.isFinite(price) || price <= 0) return null;
   const anticipo = numberValue("anticipo_eur");
   if (!Number.isFinite(anticipo) || anticipo < 0) return price;
   return Math.max(price - anticipo, 0);
@@ -949,45 +917,16 @@ function financedAmount() {
 
 // ─── Payload Builder ───────────────────────────────────────────────────────
 function buildPayload() {
-  const monthlyFromCatalog =
-    selectedOffer && selectedTermMonths
-      ? Number(selectedOffer.rate_mensili_eur?.[String(selectedTermMonths)])
-      : null;
-
-  const financed = selectedOffer && selectedTermMonths ? financedAmount() : null;
-  const taeg = selectedOffer?.taeg_annuo_percent_by_term?.[String(selectedTermMonths)] ?? null;
-
-  let override = null;
-  let costoFinanziato = null;
-  let usaRataSemplice = boolValue("usa_rata_semplice");
-  let taegPercent = numberValue("taeg_annuo_percent");
-
-  if (selectedOffer && selectedTermMonths) {
-    const fullPrice = Number(selectedOffer.prezzo_eur);
-    const financedSafe = Number.isFinite(financed) ? financed : fullPrice;
-    costoFinanziato = financedSafe;
-
-    if (financedSafe === 0) {
-      override = 0;
-    } else if (taeg && Number.isFinite(Number(taeg)) && Number(taeg) > 0) {
-      usaRataSemplice = false;
-      taegPercent = Number(taeg);
-      override = null;
-    } else if (monthlyFromCatalog && Number.isFinite(monthlyFromCatalog) && monthlyFromCatalog > 0 && fullPrice > 0) {
-      override = monthlyFromCatalog * (financedSafe / fullPrice);
-    }
-  }
-
   return {
     consumo_annuo_kwh: numberValue("consumo_annuo_kwh"),
     prezzo_energia_eur_kwh: numberValue("prezzo_energia_eur_kwh"),
 
     costo_impianto_eur: numberValue("costo_impianto_eur"),
-    costo_finanziato_eur: costoFinanziato,
+    costo_finanziato_eur: financedAmount(),
     anni_finanziamento: Math.trunc(numberValue("anni_finanziamento")),
-    usa_rata_semplice: usaRataSemplice,
-    taeg_annuo_percent: taegPercent,
-    rata_mensile_override_eur: override,
+    usa_rata_semplice: boolValue("usa_rata_semplice"),
+    taeg_annuo_percent: numberValue("taeg_annuo_percent"),
+    rata_mensile_override_eur: null,
 
     produzione_annua_kwh: numberValue("produzione_annua_kwh"),
     autoconsumo_percent: numberValue("autoconsumo_percent"),
@@ -1553,14 +1492,12 @@ function bind() {
       ["costo_impianto_eur", "anni_finanziamento", "taeg_annuo_percent", "usa_rata_semplice"].includes(id)
     ) {
       selectedOffer = null;
-      selectedTermMonths = null;
       const modelSel = document.getElementById("modello_impianto");
       modelSel.value = "";
-      populateTerms(null);
     }
 
     // Auto-calculate production from manual potenza kW
-    if (id === 'potenza_kw_manuale' && !selectedOffer) {
+    if (id === 'potenza_kw_manuale') {
       const kw = Number(document.getElementById('potenza_kw_manuale').value);
       if (Number.isFinite(kw) && kw > 0) {
         setValue('produzione_annua_kwh', Math.round(kw * KWH_PER_KW_PER_YEAR));
@@ -1592,6 +1529,13 @@ function bind() {
 
 // ─── Initialization ────────────────────────────────────────────────────────
 async function init() {
+  // Auth check - redirect to /login if not authenticated
+  if (typeof checkAuth === "function") {
+    const user = await checkAuth();
+    if (!user) return; // redirected
+    if (typeof renderUserBadge === "function") renderUserBadge("userBadge");
+  }
+
   // Theme toggle
   const themeToggle = document.getElementById("themeToggle");
   if (themeToggle) {
@@ -1605,7 +1549,7 @@ async function init() {
     await loadCatalog();
     populateModels();
   } catch (e) {
-    setStatus("Impossibile caricare il listino (catalog.json).");
+    setStatus("Impossibile caricare il listino.");
   }
 
   // Resize handler for charts
@@ -1689,8 +1633,6 @@ function initManualQuoteModal() {
         potenza_kw: potenza,
         accumulo_kwh: accumulo,
         prezzo_eur: prezzo,
-        rate_mensili_eur: {},
-        taeg_annuo_percent_by_term: {},
       };
 
       selectedManualSystems = [virtualSystem];
@@ -3067,7 +3009,7 @@ async function generatePDF(clienteName, clienteIndirizzo, clienteNote, data) {
 
   // Monthly rate calculation - use the actual rate from response (already accounts for anticipo)
   const rataMensile = data.rata_annua_impianto_eur / 12;
-  const taegPercent = selectedOffer?.taeg_annuo_percent_by_term?.[String(selectedTermMonths)] || "";
+  const taegPercent = numberValue("taeg_annuo_percent") || "";
 
   setFont("bold", 18);
   doc.setTextColor(39, 174, 96); // Green

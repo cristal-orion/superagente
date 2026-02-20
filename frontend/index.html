@@ -15,6 +15,42 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles.css?v=12" />
+    <style>
+      .user-badge {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+      }
+      .user-badge-name {
+        color: var(--text-secondary, #94a3b8);
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .user-badge-link {
+        color: var(--accent, #f59e0b);
+        text-decoration: none;
+        font-weight: 500;
+        padding: 4px 10px;
+        border: 1px solid var(--accent, #f59e0b);
+        border-radius: 6px;
+        font-size: 12px;
+      }
+      .user-badge-link:hover { background: rgba(245,158,11,0.1); }
+      .user-badge-logout {
+        background: transparent;
+        border: 1px solid #ef4444;
+        color: #ef4444;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .user-badge-logout:hover { background: rgba(239,68,68,0.1); }
+    </style>
   </head>
   <body>
     <div class="app">
@@ -31,6 +67,7 @@
           <img src="./logotech.png" alt="Tech Solutions" class="logo-img" />
         </div>
         <div class="header-right">
+          <div id="userBadge"></div>
           <div class="header-tagline">Calcola il tuo risparmio energetico</div>
           <button class="theme-toggle" id="themeToggle" aria-label="Cambia tema">
             <span class="theme-icon theme-icon-dark">🌙</span>
@@ -117,10 +154,6 @@
                     </div>
                   </div>
                 </div>
-                <div class="field">
-                  <label for="piano_rate_mesi">Piano rate</label>
-                  <select id="piano_rate_mesi" disabled></select>
-                </div>
                 <div class="field-row">
                   <div class="field">
                     <label for="costo_impianto_eur">Costo impianto</label>
@@ -204,7 +237,11 @@
                 <div class="catalog-actions">
                   <button type="button" class="btn-catalog-action" id="downloadCatalogBtn">
                     <span class="btn-icon">📥</span>
-                    <span>Scarica Listino Excel</span>
+                    <span>Scarica Excel</span>
+                  </button>
+                  <button type="button" class="btn-catalog-action" id="downloadCatalogPdfBtn">
+                    <span class="btn-icon">📄</span>
+                    <span>Scarica PDF</span>
                   </button>
                 </div>
                 <div class="catalog-upload-section">
@@ -503,7 +540,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- pdf-lib for PDF merging -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-    <script src="./app.js?v=31"></script>
+    <script src="./auth.js"></script>
+    <script src="./app.js?v=32"></script>
 
     <!-- Service Worker Registration -->
     <script>

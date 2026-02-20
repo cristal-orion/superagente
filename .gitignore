@@ -28,3 +28,17 @@ Thumbs.db
 
 # Local files
 task.txt
+nul
+
+# Environment (credentials)
+.env
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Claude internal
+.claude/mind.mv2
+
+# Backup files
+*.backup
+*.bak-*

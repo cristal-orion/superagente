@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel – Tech Solutions</title>
+  <link rel="icon" type="image/png" href="./logotech.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red: #C41E3A;
+      --red-dark: #a0172f;
+      --bg: #0f1117;
+      --surface: #1c2333;
+      --surface2: #242b3d;
+      --border: #2d3748;
+      --text: #f1f5f9;
+      --text2: #94a3b8;
+      --accent: #f59e0b;
+      --green: #10b981;
+      --danger: #ef4444;
+    }
+
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ─── Header ─────────────────────────────────────────── */
+    .admin-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .header-left img { height: 36px; }
+    .header-left h1 { font-size: 18px; font-weight: 700; color: var(--text); }
+    .header-left h1 span { color: var(--red); }
+
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-user { font-size: 14px; color: var(--text2); }
+    .btn-back, .btn-logout {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      color: var(--text2);
+      background: transparent;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-back:hover { border-color: var(--text2); color: var(--text); }
+    .btn-logout { border-color: var(--danger); color: var(--danger); }
+    .btn-logout:hover { background: rgba(239,68,68,0.1); }
+
+    /* ─── Tab navigation ─────────────────────────────────── */
+    .tabs-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      gap: 4px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--text2);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 14px 18px 12px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .tab-btn.active {
+      color: var(--text);
+      border-bottom-color: var(--red);
+    }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    /* ─── Content area ───────────────────────────────────── */
+    .content {
+      padding: 28px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ─── Section title ──────────────────────────────────── */
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ─── Card ───────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ─── Form ───────────────────────────────────────────── */
+    .form-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 160px;
+    }
+    .form-field label {
+      font-size: 12px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .form-field input, .form-field select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      padding: 10px 12px;
+      outline: none;
+    }
+    .form-field input:focus, .form-field select:focus {
+      border-color: var(--red);
+    }
+    .form-field select option { background: var(--surface); }
+
+    /* ─── Buttons ────────────────────────────────────────── */
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--red); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-success:hover { opacity: 0.9; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text2);
+    }
+    .btn-ghost:hover { border-color: var(--text2); color: var(--text); }
+    .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+    .btn-danger:hover { background: rgba(239,68,68,0.1); }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ─── Table ──────────────────────────────────────────── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th {
+      text-align: left;
+      font-size: 12px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(45,55,72,0.5);
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .td-actions { display: flex; gap: 6px; align-items: center; }
+
+    /* ─── Badge ──────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-admin { background: rgba(196,30,58,0.2); color: #f87171; }
+    .badge-agent { background: rgba(16,185,129,0.15); color: #34d399; }
+    .badge-inactive { background: rgba(100,116,139,0.2); color: #94a3b8; }
+    .badge-active { background: rgba(16,185,129,0.15); color: #34d399; }
+
+    /* ─── Alert ──────────────────────────────────────────── */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
+    .alert-success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #34d399; }
+
+    /* ─── Upload zone ────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--red); }
+    .upload-zone-text { color: var(--text2); font-size: 14px; margin-top: 8px; }
+
+    /* ─── Catalog items list ──────────────────────────────── */
+    .items-count { color: var(--text2); font-size: 13px; }
+
+    /* ─── Assign select ──────────────────────────────────── */
+    .assign-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .assign-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .assign-tag {
+      background: rgba(245,158,11,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .assign-tag button {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0;
+      line-height: 1;
+    }
+
+    /* ─── Password modal ─────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      width: 380px;
+      max-width: 90vw;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .modal-subtitle {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 20px;
+    }
+    .pwd-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 20px;
+    }
+    .pwd-display span {
+      flex: 1;
+      font-size: 15px;
+      font-family: monospace;
+      letter-spacing: 0.04em;
+      word-break: break-all;
+    }
+    .pwd-display button {
+      background: none;
+      border: none;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 2px 4px;
+      transition: color 0.15s;
+    }
+    .pwd-display button:hover { color: var(--text); }
+    .modal-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 4px 0 20px;
+    }
+    .modal-label {
+      font-size: 12px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .modal-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .modal-input-row input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      padding: 10px 12px;
+      outline: none;
+    }
+    .modal-input-row input:focus { border-color: var(--red); }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--red);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-row { text-align: center; color: var(--text2); padding: 32px; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="admin-header">
+    <div class="header-left">
+      <img src="./logotech.png" alt="Tech Solutions" />
+      <h1><span>Admin</span> Panel</h1>
+    </div>
+    <div class="header-right">
+      <span class="header-user" id="headerUser"></span>
+      <a href="/" class="btn-back">← Calcolatore</a>
+      <button class="btn-logout" onclick="logout()">Esci</button>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs-bar">
+    <button class="tab-btn active" data-tab="agenzie">Agenzie</button>
+    <button class="tab-btn" data-tab="listini">Listini</button>
+    <button class="tab-btn" data-tab="schede">Schede Tecniche</button>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- ─── Tab: Agenzie ──────────────────────────────────── -->
+    <div class="tab-panel active" id="tab-agenzie">
+      <div class="section-title">Gestione Agenzie</div>
+
+      <!-- Create user form -->
+      <div class="card">
+        <div class="card-title">Crea nuovo account agenzia</div>
+        <div id="userFormAlert"></div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Email</label>
+            <input type="email" id="newEmail" placeholder="agenzia@example.com" />
+          </div>
+          <div class="form-field">
+            <label>Password</label>
+            <input type="password" id="newPassword" placeholder="••••••••" />
+          </div>
+          <div class="form-field">
+            <label>Nome Agenzia</label>
+            <input type="text" id="newAgency" placeholder="Es. MF Group" />
+          </div>
+          <div class="form-field" style="flex:0">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" onclick="createUser()">Crea Account</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users table -->
+      <div class="card">
+        <div class="card-title">Account esistenti</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Agenzia</th>
+              <th>Ruolo</th>
+              <th>Stato</th>
+              <th>Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="usersTable">
+            <tr class="loading-row"><td colspan="6"><span class="spinner"></span> Caricamento...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── Tab: Listini ──────────────────────────────────── -->
+    <div class="tab-panel" id="tab-listini">
+      <div class="section-title">Gestione Listini</div>
+
+      <!-- Create listino -->
+      <div class="card">
+        <div class="card-title">Crea nuovo listino</div>
+        <div id="listinoFormAlert"></div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Nome listino</label>
+            <input type="text" id="newListinoName" placeholder="Es. Listino Settembre 2025" />
+          </div>
+          <div class="form-field" style="flex:0">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" onclick="createListino()">Crea Listino</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Listini table -->
+      <div class="card">
+        <div class="card-title">Listini esistenti</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>Proprietario</th>
+              <th>Prodotti</th>
+              <th>Assegnato a</th>
+              <th>Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="listiniTable">
+            <tr class="loading-row"><td colspan="6"><span class="spinner"></span> Caricamento...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── Tab: Schede Tecniche ──────────────────────────── -->
+    <div class="tab-panel" id="tab-schede">
+      <div class="section-title">Schede Tecniche</div>
+
+      <!-- Upload form -->
+      <div class="card">
+        <div class="card-title">Carica scheda tecnica</div>
+        <div id="schedeAlert"></div>
+        <div class="form-row" style="margin-bottom:16px">
+          <div class="form-field">
+            <label>Categoria</label>
+            <select id="schedeCategory">
+              <option value="pannelli">Pannelli</option>
+              <option value="inverter">Inverter</option>
+              <option value="batterie">Batterie</option>
+              <option value="pompe">Pompe di Calore</option>
+              <option value="altro">Altro</option>
+            </select>
+          </div>
+        </div>
+        <div class="upload-zone" id="schedeDropzone">
+          <div>📄 Trascina PDF qui o clicca per selezionare</div>
+          <div class="upload-zone-text">Massimo 10MB per file, solo PDF</div>
+          <input type="file" id="schedeFileInput" accept=".pdf" style="display:none" />
+        </div>
+      </div>
+
+      <!-- Files list -->
+      <div class="card">
+        <div class="card-title">Schede caricate</div>
+        <div id="schedeList">
+          <div class="loading-row"><span class="spinner"></span> Caricamento...</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- ─── Password Modal ──────────────────────────────────── -->
+  <div class="modal-overlay" id="pwdModal" onclick="closePwdModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-title">🔑 Password</div>
+      <div class="modal-subtitle" id="pwdModalSubtitle"></div>
+
+      <div class="modal-label">Password attuale</div>
+      <div class="pwd-display">
+        <span id="pwdValue">—</span>
+        <button id="pwdToggleBtn" onclick="togglePwdVisibility()" title="Mostra/Nascondi">👁</button>
+        <button onclick="copyPwd()" title="Copia">📋</button>
+      </div>
+
+      <hr class="modal-divider" />
+
+      <div class="modal-label">Imposta nuova password</div>
+      <div id="pwdChangeAlert"></div>
+      <div class="modal-input-row">
+        <input type="text" id="pwdNewInput" placeholder="Nuova password..." />
+        <button class="btn btn-primary btn-sm" onclick="submitNewPassword()">Salva</button>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost btn-sm" onclick="closePwdModal()">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./auth.js"></script>
+  <script>
+    // ─── State ───────────────────────────────────────────────────────────────
+    let allUsers = [];
+    let allListini = [];
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+    async function init() {
+      const user = await checkAuth();
+      if (!user) return;
+      if (user.role !== "superadmin") {
+        window.location.href = "/";
+        return;
+      }
+      document.getElementById("headerUser").textContent = user.agency_name || user.email;
+
+      await Promise.all([loadUsers(), loadListini(), loadSchede()]);
+    }
+
+    // ─── Tab switching ────────────────────────────────────────────────────────
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    // ─── Alert helpers ────────────────────────────────────────────────────────
+    function showAlert(containerId, message, type = "error") {
+      const el = document.getElementById(containerId);
+      el.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+      setTimeout(() => { el.innerHTML = ""; }, 4000);
+    }
+
+    // ─── AGENZIE ─────────────────────────────────────────────────────────────
+
+    async function loadUsers() {
+      const res = await authFetch("/api/users");
+      if (!res.ok) return;
+      allUsers = await res.json();
+      renderUsers();
+    }
+
+    function renderUsers() {
+      const tbody = document.getElementById("usersTable");
+      if (!allUsers.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:24px">Nessun utente</td></tr>';
+        return;
+      }
+      tbody.innerHTML = allUsers.map(u => `
+        <tr>
+          <td>${u.id}</td>
+          <td>${u.email}</td>
+          <td>${u.agency_name || "—"}</td>
+          <td><span class="badge badge-${u.role === "superadmin" ? "admin" : "agent"}">${u.role}</span></td>
+          <td><span class="badge badge-${u.is_active ? "active" : "inactive"}">${u.is_active ? "Attivo" : "Disabilitato"}</span></td>
+          <td>
+            <div class="td-actions">
+              <button class="btn btn-ghost btn-sm" onclick="toggleUser(${u.id}, ${u.is_active})">
+                ${u.is_active ? "Disabilita" : "Abilita"}
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="openPwdModal(${u.id}, '${u.email}')">🔑</button>
+              ${u.role !== "superadmin" ? `
+                <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id}, '${u.email}')">Elimina</button>
+              ` : ""}
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    async function createUser() {
+      const email = document.getElementById("newEmail").value.trim();
+      const password = document.getElementById("newPassword").value;
+      const agency_name = document.getElementById("newAgency").value.trim();
+      if (!email || !password) return showAlert("userFormAlert", "Email e password obbligatorie");
+
+      const res = await authFetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, agency_name, role: "agent" }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        return showAlert("userFormAlert", d.detail || "Errore nella creazione");
+      }
+      const newUser = await res.json();
+      document.getElementById("newEmail").value = "";
+      document.getElementById("newPassword").value = "";
+      document.getElementById("newAgency").value = "";
+      allUsers.push(newUser);
+      renderUsers();
+      renderListini();
+      showAlert("userFormAlert", "Account creato con successo", "success");
+    }
+
+    async function toggleUser(userId, currentlyActive) {
+      const res = await authFetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: !currentlyActive }),
+      });
+      if (!res.ok) return;
+      const updated = await res.json();
+      const idx = allUsers.findIndex(u => u.id === userId);
+      if (idx >= 0) { allUsers[idx] = updated; renderUsers(); }
+    }
+
+    async function deleteUser(userId, email) {
+      if (!confirm(`Eliminare l'utente ${email}? Questa azione non è reversibile.`)) return;
+      const res = await authFetch(`/api/users/${userId}`, { method: "DELETE" });
+      if (res.ok) {
+        allUsers = allUsers.filter(u => u.id !== userId);
+        renderUsers();
+        renderListini();
+      }
+    }
+
+    // ─── LISTINI ─────────────────────────────────────────────────────────────
+
+    async function loadListini() {
+      const res = await authFetch("/api/listini");
+      if (!res.ok) return;
+      allListini = await res.json();
+      renderListini();
+    }
+
+    function renderListini() {
+      const tbody = document.getElementById("listiniTable");
+      if (!allListini.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:24px">Nessun listino</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = allListini.map(l => {
+        const assignedNames = l.assigned_to
+          .map(uid => allUsers.find(u => u.id === uid))
+          .filter(Boolean)
+          .map(u => u.agency_name || u.email);
+
+        const assignTagsHtml = assignedNames.map((name, i) => {
+          const uid = l.assigned_to[i];
+          return `<span class="assign-tag">${name}<button onclick="unassignListino(${l.id}, ${uid})" title="Rimuovi">×</button></span>`;
+        }).join("");
+
+        // User options for assign dropdown (include all users, exclude already assigned)
+        const agentOptions = allUsers
+          .filter(u => !l.assigned_to.includes(u.id))
+          .map(u => `<option value="${u.id}">${u.agency_name || u.email}${u.role === "superadmin" ? " (Admin)" : ""}</option>`)
+          .join("");
+
+        return `
+          <tr>
+            <td>${l.id}</td>
+            <td><strong>${l.name}</strong></td>
+            <td>${l.owner_email}</td>
+            <td class="items-count">${l.items_count} prodotti</td>
+            <td>
+              <div class="assign-tags">${assignTagsHtml || '<span style="color:var(--text2);font-size:12px">Nessuno</span>'}</div>
+              <div class="assign-row">
+                <select id="assignSelect-${l.id}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:5px 8px;font-size:12px;font-family:inherit;">
+                  <option value="">Assegna a...</option>
+                  ${agentOptions}
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="assignListino(${l.id})">Assegna</button>
+              </div>
+            </td>
+            <td>
+              <div class="td-actions">
+                <a href="/listini?id=${l.id}" class="btn btn-ghost btn-sm">Modifica</a>
+                <button class="btn btn-danger btn-sm" onclick="deleteListino(${l.id}, '${l.name}')">Elimina</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function createListino() {
+      const name = document.getElementById("newListinoName").value.trim();
+      if (!name) return showAlert("listinoFormAlert", "Inserisci un nome per il listino");
+
+      // 1. Create the listino
+      const res = await authFetch("/api/listini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, catalog_items: [] }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        return showAlert("listinoFormAlert", d.detail || "Errore nella creazione");
+      }
+      const created = await res.json();
+
+      // 2. Auto-populate from catalog.json so it's immediately ready
+      await authFetch(`/api/listini/${created.id}/populate-from-catalog`, { method: "POST" });
+
+      document.getElementById("newListinoName").value = "";
+      await loadListini();
+      // Redirect to editor
+      window.location.href = `/listini?id=${created.id}`;
+    }
+
+    async function assignListino(listinoId) {
+      const sel = document.getElementById(`assignSelect-${listinoId}`);
+      const userId = parseInt(sel.value);
+      if (!userId) return;
+
+      const res = await authFetch(`/api/listini/${listinoId}/assign/${userId}`, { method: "POST" });
+      if (res.ok) await loadListini();
+    }
+
+    async function unassignListino(listinoId, userId) {
+      const res = await authFetch(`/api/listini/${listinoId}/assign/${userId}`, { method: "DELETE" });
+      if (res.ok) await loadListini();
+    }
+
+    async function deleteListino(listinoId, name) {
+      if (!confirm(`Eliminare il listino "${name}"? I prodotti saranno rimossi.`)) return;
+      const res = await authFetch(`/api/listini/${listinoId}`, { method: "DELETE" });
+      if (res.ok) await loadListini();
+    }
+
+    // ─── SCHEDE TECNICHE ──────────────────────────────────────────────────────
+
+    async function loadSchede() {
+      const res = await authFetch("/datasheets");
+      if (!res.ok) return;
+      const data = await res.json();
+      renderSchede(data);
+    }
+
+    function renderSchede(data) {
+      const container = document.getElementById("schedeList");
+      const categories = ["pannelli", "inverter", "batterie", "pompe", "altro"];
+      const labels = {
+        pannelli: "Pannelli",
+        inverter: "Inverter",
+        batterie: "Batterie",
+        pompe: "Pompe di Calore",
+        altro: "Altro",
+      };
+
+      let html = "";
+      for (const cat of categories) {
+        const files = data[cat] || [];
+        html += `<div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">${labels[cat]}</div>`;
+
+        if (!files.length) {
+          html += `<div style="color:var(--text2);font-size:13px;padding:8px 0">Nessuna scheda caricata</div>`;
+        } else {
+          html += `<table class="data-table" style="table-layout:fixed;width:100%"><colgroup><col style="width:60%"><col style="width:20%"><col style="width:20%"></colgroup><thead><tr><th>Nome</th><th>Dimensione</th><th>Azioni</th></tr></thead><tbody>`;
+          html += files.map(f => `
+            <tr>
+              <td>${f.name}</td>
+              <td style="color:var(--text2)">${(f.size / 1024).toFixed(0)} KB</td>
+              <td>
+                <div class="td-actions">
+                  <a href="${f.url}" target="_blank" class="btn btn-ghost btn-sm">Apri</a>
+                  <button class="btn btn-danger btn-sm" onclick="deleteScheda('${f.category}', '${f.filename}')">Elimina</button>
+                </div>
+              </td>
+            </tr>
+          `).join("");
+          html += `</tbody></table>`;
+        }
+        html += `</div>`;
+      }
+      container.innerHTML = html;
+    }
+
+    async function deleteScheda(category, filename) {
+      if (!confirm(`Eliminare "${filename}"?`)) return;
+      const res = await authFetch(`/datasheets/${category}/${encodeURIComponent(filename)}`, { method: "DELETE" });
+      if (res.ok) await loadSchede();
+    }
+
+    // Upload zone setup
+    function setupUploadZone() {
+      const zone = document.getElementById("schedeDropzone");
+      const input = document.getElementById("schedeFileInput");
+
+      zone.addEventListener("click", () => input.click());
+      zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag-over"); });
+      zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+      zone.addEventListener("drop", e => {
+        e.preventDefault();
+        zone.classList.remove("drag-over");
+        const file = e.dataTransfer.files[0];
+        if (file) uploadScheda(file);
+      });
+      input.addEventListener("change", () => {
+        if (input.files[0]) uploadScheda(input.files[0]);
+      });
+    }
+
+    async function uploadScheda(file) {
+      if (!file.name.toLowerCase().endsWith(".pdf")) {
+        return showAlert("schedeAlert", "Solo file PDF sono accettati");
+      }
+      const category = document.getElementById("schedeCategory").value;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", category);
+
+      showAlert("schedeAlert", "Caricamento in corso...", "success");
+      const res = await authFetch("/datasheets/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        return showAlert("schedeAlert", d.detail || "Errore nel caricamento");
+      }
+      showAlert("schedeAlert", "Scheda caricata con successo", "success");
+      await loadSchede();
+    }
+
+    // ─── PASSWORD MODAL ───────────────────────────────────────────────────────
+
+    let pwdModalUserId = null;
+    let pwdVisible = false;
+    let pwdRealValue = "";
+
+    function openPwdModal(userId, email) {
+      pwdModalUserId = userId;
+      pwdVisible = false;
+      document.getElementById("pwdModalSubtitle").textContent = email;
+      document.getElementById("pwdNewInput").value = "";
+      document.getElementById("pwdChangeAlert").innerHTML = "";
+
+      // Find user in already-loaded list
+      const user = allUsers.find(u => u.id === userId);
+      pwdRealValue = user?.plain_password || "";
+      renderPwdValue();
+      document.getElementById("pwdModal").classList.add("open");
+    }
+
+    function renderPwdValue() {
+      const span = document.getElementById("pwdValue");
+      if (!pwdRealValue) {
+        span.textContent = "(non disponibile)";
+        span.style.color = "var(--text2)";
+      } else if (pwdVisible) {
+        span.textContent = pwdRealValue;
+        span.style.color = "var(--text)";
+      } else {
+        span.textContent = "•".repeat(Math.min(pwdRealValue.length, 16));
+        span.style.color = "var(--text2)";
+      }
+    }
+
+    function togglePwdVisibility() {
+      pwdVisible = !pwdVisible;
+      renderPwdValue();
+      document.getElementById("pwdToggleBtn").textContent = pwdVisible ? "🙈" : "👁";
+    }
+
+    function copyPwd() {
+      if (!pwdRealValue) return;
+      navigator.clipboard.writeText(pwdRealValue).then(() => {
+        showPwdAlert("Password copiata negli appunti", "success");
+      });
+    }
+
+    function closePwdModal(e) {
+      if (e && e.target !== document.getElementById("pwdModal")) return;
+      document.getElementById("pwdModal").classList.remove("open");
+      pwdModalUserId = null;
+    }
+
+    function showPwdAlert(msg, type = "error") {
+      const el = document.getElementById("pwdChangeAlert");
+      el.innerHTML = `<div class="alert alert-${type}" style="margin-bottom:12px">${msg}</div>`;
+      setTimeout(() => { el.innerHTML = ""; }, 3000);
+    }
+
+    async function submitNewPassword() {
+      const newPwd = document.getElementById("pwdNewInput").value.trim();
+      if (!newPwd) return showPwdAlert("Inserisci una nuova password");
+      if (newPwd.length < 4) return showPwdAlert("Password troppo corta (min 4 caratteri)");
+
+      const res = await authFetch(`/api/users/${pwdModalUserId}/set-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPwd }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        return showPwdAlert(d.detail || "Errore nel cambio password");
+      }
+      const updated = await res.json();
+      pwdRealValue = updated.plain_password || newPwd;
+      const idx = allUsers.findIndex(u => u.id === pwdModalUserId);
+      if (idx >= 0) { allUsers[idx] = updated; renderUsers(); }
+      document.getElementById("pwdNewInput").value = "";
+      showPwdAlert("Password aggiornata con successo", "success");
+      renderPwdValue();
+    }
+
+    // ─── Start ────────────────────────────────────────────────────────────────
+    setupUploadZone();
+    init();
+  </script>
+</body>
+</html>

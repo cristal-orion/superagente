@@ -8,16 +8,31 @@
 
 ```bash
 # 1. Clona il repository
-git clone <repo-url>
-cd Calcolatoreimpianti
+git clone https://github.com/cristal-orion/superagente.git
+cd superagente
 
 # 2. Esegui lo script di setup
 chmod +x setup.sh
 ./setup.sh
 
-# 3. Avvia i container
+# 3. Configura le credenziali
+nano .env
+# Imposta: JWT_SECRET_KEY, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD, SUPERADMIN_AGENCY
+
+# 4. Avvia i container
 docker-compose up -d --build
 ```
+
+## Configurazione (.env)
+
+Il file `.env` contiene le credenziali del sistema. Viene creato automaticamente da `setup.sh` copiando `.env.example`. **Modifica i valori prima di avviare.**
+
+| Variabile | Descrizione |
+|-----------|-------------|
+| `JWT_SECRET_KEY` | Chiave segreta per i token JWT (usa una stringa lunga e casuale) |
+| `SUPERADMIN_EMAIL` | Email dell'account amministratore |
+| `SUPERADMIN_PASSWORD` | Password dell'account amministratore |
+| `SUPERADMIN_AGENCY` | Nome dell'agenzia admin |
 
 ## Comandi utili
 
@@ -57,7 +72,7 @@ data/
 
 ## Porte
 
-- **80**: Frontend (nginx) - Accesso pubblico
+- **8081**: Frontend (nginx) - Accesso pubblico
 - **8000**: Backend (interno, non esposto)
 
 ## Aggiornamento del listino
@@ -74,6 +89,9 @@ cp data/catalog.json backup/catalog-$(date +%Y%m%d).json
 
 # Backup datasheets
 tar -czvf backup/datasheets-$(date +%Y%m%d).tar.gz data/datasheets/
+
+# Backup database (utenti e listini)
+docker cp pv-calculator-backend:/app/db/app.db backup/app-$(date +%Y%m%d).db
 ```
 
 ## Troubleshooting

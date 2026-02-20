@@ -12,6 +12,17 @@ if [ ! -f data/catalog.json ]; then
     echo "Created data/catalog.json"
 fi
 
+# Create .env from example if not exists
+if [ ! -f .env ]; then
+    cp .env.example .env
+    echo "Created .env — MODIFICA LE CREDENZIALI prima di avviare!"
+    echo ""
+    echo "  nano .env"
+    echo ""
+else
+    echo ".env già presente"
+fi
+
 echo "Setup complete!"
 echo ""
 echo "To start the application:"

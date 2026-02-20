@@ -9,8 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create directory for datasheets
-RUN mkdir -p /app/datasheets
+# Create directories for volume mounts
+RUN mkdir -p /app/datasheets /app/db /app/data
 
 EXPOSE 8000
 
