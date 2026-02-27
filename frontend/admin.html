@@ -754,6 +754,7 @@
             </td>
             <td>
               <div class="td-actions">
+                <button class="btn btn-ghost btn-sm" onclick="duplicateListino(${l.id}, '${l.name}')">Duplica</button>
                 <a href="/listini?id=${l.id}" class="btn btn-ghost btn-sm">Modifica</a>
                 <button class="btn btn-danger btn-sm" onclick="deleteListino(${l.id}, '${l.name}')">Elimina</button>
               </div>
@@ -800,6 +801,20 @@
     async function unassignListino(listinoId, userId) {
       const res = await authFetch(`/api/listini/${listinoId}/assign/${userId}`, { method: "DELETE" });
       if (res.ok) await loadListini();
+    }
+
+    async function duplicateListino(listinoId, name) {
+      if (!confirm(`Duplicare il listino "${name}"? Verrà creata una copia modificabile.`)) return;
+      const res = await authFetch(`/api/listini/${listinoId}/duplicate`, { method: "POST" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        return alert(d.detail || "Errore nella duplicazione");
+      }
+      const created = await res.json();
+      await loadListini();
+      if (confirm(`Listino "${created.name}" creato. Vuoi aprirlo per modificarlo?`)) {
+        window.location.href = `/listini?id=${created.id}`;
+      }
     }
 
     async function deleteListino(listinoId, name) {

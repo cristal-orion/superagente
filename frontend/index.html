@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=12" />
+    <link rel="stylesheet" href="./styles.css?v=13" />
     <style>
       .user-badge {
         display: flex;
@@ -172,10 +172,10 @@
                 </div>
                 <div class="field-row">
                   <div class="field">
-                    <label for="anni_finanziamento">Finanziamento</label>
+                    <label for="mesi_finanziamento">Durata finanziamento</label>
                     <div class="input-with-unit">
-                      <input id="anni_finanziamento" type="number" step="1" min="1" max="30" value="10" />
-                      <span class="unit">anni</span>
+                      <input id="mesi_finanziamento" type="number" step="1" min="1" max="360" value="120" />
+                      <span class="unit">mesi</span>
                     </div>
                   </div>
                   <div class="field">
@@ -183,6 +183,28 @@
                     <div class="input-with-unit">
                       <input id="produzione_annua_kwh" type="number" step="1" min="1" value="4500" />
                       <span class="unit">kWh/anno</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="taeg_annuo_percent">TAEG annuo</label>
+                    <div class="input-with-unit">
+                      <input id="taeg_annuo_percent" type="number" step="0.1" min="0" value="0" />
+                      <span class="unit">%</span>
+                    </div>
+                  </div>
+                  <div class="field inline-field" style="align-self: flex-end; padding-bottom: 6px;">
+                    <input id="usa_rata_semplice" type="checkbox" checked />
+                    <label for="usa_rata_semplice">Rata semplice (costo/mesi)</label>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field rata-mensile-field">
+                    <label for="rata_mensile_display">Rata mensile</label>
+                    <div class="input-with-unit rata-mensile-highlight">
+                      <input id="rata_mensile_display" type="text" readonly value="—" tabindex="-1" />
+                      <span class="unit">€/mese</span>
                     </div>
                   </div>
                 </div>
@@ -297,18 +319,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="field inline-field">
-                  <input id="usa_rata_semplice" type="checkbox" checked />
-                  <label for="usa_rata_semplice">Rata semplice (costo/anni)</label>
-                </div>
                 <div class="field-row">
-                  <div class="field">
-                    <label for="taeg_annuo_percent">TAEG annuo</label>
-                    <div class="input-with-unit">
-                      <input id="taeg_annuo_percent" type="number" step="0.1" min="0" value="0" />
-                      <span class="unit">%</span>
-                    </div>
-                  </div>
                   <div class="field">
                     <label for="fattore_prudenza">Fattore prudenza</label>
                     <input id="fattore_prudenza" type="number" step="0.01" min="0.5" max="1.2" value="1.0" />
@@ -541,7 +552,7 @@
     <!-- pdf-lib for PDF merging -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="./auth.js"></script>
-    <script src="./app.js?v=32"></script>
+    <script src="./app.js?v=33"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -618,10 +629,10 @@
                 </div>
               </div>
               <div class="field" id="manualRateOptions">
-                <label for="manualAnniFinanziamento">Durata finanziamento</label>
+                <label for="manualMesiFinanziamento">Durata finanziamento</label>
                 <div class="input-with-unit">
-                  <input id="manualAnniFinanziamento" type="number" step="1" min="1" max="20" value="10" />
-                  <span class="unit">anni</span>
+                  <input id="manualMesiFinanziamento" type="number" step="1" min="1" max="360" value="120" />
+                  <span class="unit">mesi</span>
                 </div>
               </div>
               <div class="field" id="manualTaegOptions">

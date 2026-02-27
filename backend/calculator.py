@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from models import CalcRequest, CalcResponse, CashflowYear
 
 
@@ -7,16 +9,16 @@ def calc_spesa_annua_attuale(consumo: float, prezzo: float) -> float:
     return consumo * prezzo
 
 
-def calc_rata_annua_semplice(costo: float, anni: int) -> float:
+def calc_rata_annua_semplice(costo: float, anni: float) -> float:
     return costo / anni
 
 
-def calc_rata_annua_con_taeg(costo: float, anni: int, taeg_percent: float) -> float:
+def calc_rata_annua_con_taeg(costo: float, anni: float, taeg_percent: float) -> float:
     if taeg_percent <= 0:
         return calc_rata_annua_semplice(costo, anni)
 
     r_mensile = (taeg_percent / 100.0) / 12.0
-    n_mesi = anni * 12
+    n_mesi = round(anni * 12)
 
     if r_mensile == 0:
         return calc_rata_annua_semplice(costo, anni)
@@ -53,15 +55,21 @@ def calc_response(request: CalcRequest) -> CalcResponse:
     )
     capitale_finanziato = max(capitale_finanziato, 0.0)
 
-    if capitale_finanziato == 0 or request.anni_finanziamento <= 0:
+    # Use mesi_finanziamento if provided, otherwise fall back to anni_finanziamento
+    if request.mesi_finanziamento is not None:
+        anni_fin = request.mesi_finanziamento / 12.0
+    else:
+        anni_fin = float(request.anni_finanziamento)
+
+    if capitale_finanziato == 0 or anni_fin <= 0:
         rata_annua = 0.0
     elif request.rata_mensile_override_eur is not None and request.rata_mensile_override_eur > 0:
         rata_annua = request.rata_mensile_override_eur * 12.0
     elif request.usa_rata_semplice:
-        rata_annua = calc_rata_annua_semplice(capitale_finanziato, request.anni_finanziamento)
+        rata_annua = calc_rata_annua_semplice(capitale_finanziato, anni_fin)
     else:
         rata_annua = calc_rata_annua_con_taeg(
-            capitale_finanziato, request.anni_finanziamento, request.taeg_annuo_percent
+            capitale_finanziato, anni_fin, request.taeg_annuo_percent
         )
 
     detrazione_annua = calc_detrazione_annua(
@@ -91,9 +99,11 @@ def calc_response(request: CalcRequest) -> CalcResponse:
     else:
         messaggio = f"Paghi circa {abs(risparmio_netto):.0f}€ in più all'anno (stimato)."
 
+    anni_fin_ceil = math.ceil(anni_fin)
+
     cashflow_anni: list[CashflowYear] = []
     for anno in range(1, 26):
-        rata = rata_annua if anno <= request.anni_finanziamento else 0.0
+        rata = rata_annua if anno <= anni_fin_ceil else 0.0
         detrazione = detrazione_annua if anno <= request.anni_detrazione else 0.0
         costo = rata - detrazione - risparmio - ricavo_gse
         rn = risparmio + detrazione + ricavo_gse - rata

@@ -61,17 +61,21 @@ const Calculator = {
       : request.costo_impianto_eur;
     capitaleFinanziato = Math.max(capitaleFinanziato, 0.0);
 
+    // Derive anni from mesi for calculation functions
+    const mesi = request.mesi_finanziamento || 0;
+    const anniFinanziamento = mesi / 12;
+
     let rataAnnua;
-    if (capitaleFinanziato === 0 || request.anni_finanziamento <= 0) {
+    if (capitaleFinanziato === 0 || mesi <= 0) {
       rataAnnua = 0.0;
     } else if (request.rata_mensile_override_eur !== null && request.rata_mensile_override_eur > 0) {
       rataAnnua = request.rata_mensile_override_eur * 12.0;
     } else if (request.usa_rata_semplice) {
-      rataAnnua = this.calcRataAnnuaSemplice(capitaleFinanziato, request.anni_finanziamento);
+      rataAnnua = capitaleFinanziato / (mesi / 12);
     } else {
       rataAnnua = this.calcRataAnnuaConTaeg(
         capitaleFinanziato,
-        request.anni_finanziamento,
+        anniFinanziamento,
         request.taeg_annuo_percent
       );
     }
@@ -113,7 +117,7 @@ const Calculator = {
     // Genera cashflow 25 anni
     const cashflowAnni = [];
     for (let anno = 1; anno <= 25; anno++) {
-      const rata = anno <= request.anni_finanziamento ? rataAnnua : 0.0;
+      const rata = anno <= Math.ceil(mesi / 12) ? rataAnnua : 0.0;
       const detrazione = anno <= request.anni_detrazione ? detrazioneAnnua : 0.0;
       const costo = rata - detrazione - risparmio - ricavoGse;
       const rn = risparmio + detrazione + ricavoGse - rata;
@@ -923,7 +927,7 @@ function buildPayload() {
 
     costo_impianto_eur: numberValue("costo_impianto_eur"),
     costo_finanziato_eur: financedAmount(),
-    anni_finanziamento: Math.trunc(numberValue("anni_finanziamento")),
+    mesi_finanziamento: Math.trunc(numberValue("mesi_finanziamento")),
     usa_rata_semplice: boolValue("usa_rata_semplice"),
     taeg_annuo_percent: numberValue("taeg_annuo_percent"),
     rata_mensile_override_eur: null,
@@ -954,9 +958,19 @@ function render(response) {
   const detrazione = response.detrazione_annua_eur;
 
   // Detect cash purchase (no financing)
-  const anniFinanziamento = Math.trunc(numberValue("anni_finanziamento"));
+  const mesiFinanziamento = Math.trunc(numberValue("mesi_finanziamento"));
   const costoImpianto = numberValue("costo_impianto_eur");
-  const isContanti = anniFinanziamento <= 0 && costoImpianto > 0;
+  const isContanti = mesiFinanziamento <= 0 && costoImpianto > 0;
+
+  // Update rata mensile display field
+  const rataMensileDisplay = document.getElementById("rata_mensile_display");
+  if (rataMensileDisplay) {
+    if (rata > 0) {
+      rataMensileDisplay.value = (rata / 12).toFixed(2) + " €";
+    } else {
+      rataMensileDisplay.value = "—";
+    }
+  }
 
   // Calculate percentage savings
   const percentSaved = spesaAttuale > 0 ? Math.round((Math.abs(risparmioNetto) / spesaAttuale) * 100) : 0;
@@ -1332,9 +1346,9 @@ function drawCashflowBars(canvas, cashflowYears) {
 
 function drawCharts(response) {
   const canvas = document.getElementById("cashflowChart");
-  const _anni = Math.trunc(numberValue("anni_finanziamento"));
+  const _mesi = Math.trunc(numberValue("mesi_finanziamento"));
   const _costo = numberValue("costo_impianto_eur");
-  const initialCost = (_anni <= 0 && _costo > 0) ? _costo : 0;
+  const initialCost = (_mesi <= 0 && _costo > 0) ? _costo : 0;
 
   // Draw cumulative investment return chart
   drawInvestmentChart(canvas, response.cashflow_anni || [], initialCost);
@@ -1489,7 +1503,7 @@ function bind() {
     if (
       selectedOffer &&
       clientType === 'residenziale' &&
-      ["costo_impianto_eur", "anni_finanziamento", "taeg_annuo_percent", "usa_rata_semplice"].includes(id)
+      ["costo_impianto_eur", "mesi_finanziamento", "taeg_annuo_percent", "usa_rata_semplice"].includes(id)
     ) {
       selectedOffer = null;
       const modelSel = document.getElementById("modello_impianto");
@@ -1593,9 +1607,9 @@ function initManualQuoteModal() {
     }
 
     // Pre-fill financing and price from main form
-    const anniFinanziamento = numberValue("anni_finanziamento");
-    if (anniFinanziamento) {
-      document.getElementById("manualAnniFinanziamento").value = anniFinanziamento;
+    const mesiFinanziamento = numberValue("mesi_finanziamento");
+    if (mesiFinanziamento) {
+      document.getElementById("manualMesiFinanziamento").value = mesiFinanziamento;
     }
     const taeg = numberValue("taeg_annuo_percent");
     if (taeg) {
@@ -1803,7 +1817,8 @@ async function generateManualQuote() {
   const clienteIndirizzo = document.getElementById("manualClienteIndirizzo").value.trim();
   const clienteNote = document.getElementById("manualClienteNote").value.trim();
   const paymentType = document.querySelector('input[name="paymentType"]:checked').value;
-  const anniFinanziamento = paymentType === "rate" ? Number(document.getElementById("manualAnniFinanziamento").value) : 0;
+  const mesiFinanziamentoModal = paymentType === "rate" ? Number(document.getElementById("manualMesiFinanziamento").value) : 0;
+  const anniFinanziamento = mesiFinanziamentoModal / 12;
   const taegPercent = paymentType === "rate" ? Number(document.getElementById("manualTaegPercent").value) : 0;
   const customTotalPrice = Number(document.getElementById("manualTotalPrice").value) || 0;
   const ivaType = document.getElementById("manualIvaType").value; // "inclusa" or "esclusa"
@@ -1898,7 +1913,7 @@ async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, cl
   }
 
   const totalPotenza = systems.reduce((sum, s) => sum + Number(s.potenza_kw || 0), 0);
-  const mesiFinanziamento = anniFinanziamento * 12;
+  const mesiFinanziamento = mesiFinanziamentoModal;
 
   // ═══════════════════════════════════════════════════════════════════════
   // PAGE 1: Cover Page with Background Image
@@ -2918,8 +2933,8 @@ async function generatePDF(clienteName, clienteIndirizzo, clienteNote, data) {
   const costoImpianto = numberValue("costo_impianto_eur");
   const anticipoEur = numberValue("anticipo_eur");
   const costoFinanziato = Math.max(0, costoImpianto - anticipoEur);
-  const anniFinanziamento = numberValue("anni_finanziamento");
-  const mesiFinanziamento = anniFinanziamento * 12;
+  const mesiFinanziamento = Math.trunc(numberValue("mesi_finanziamento"));
+  const anniFinanziamento = mesiFinanziamento / 12;
 
   // Product table - clean white cards
   const colWidth1 = 25;

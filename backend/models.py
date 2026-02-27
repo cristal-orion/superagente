@@ -14,6 +14,12 @@ class CalcRequest(BaseModel):
         description="Se valorizzato, viene usato per calcolare le rate (detrazione resta sul costo impianto).",
     )
     anni_finanziamento: int = Field(10, ge=1, le=30)
+    mesi_finanziamento: int | None = Field(
+        None,
+        ge=1,
+        le=360,
+        description="Se valorizzato, viene usato al posto di anni_finanziamento (più preciso).",
+    )
     usa_rata_semplice: bool = Field(True)
     taeg_annuo_percent: float = Field(0.0, ge=0)
 

@@ -550,6 +550,24 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 
+/* Rata mensile highlight */
+.rata-mensile-highlight {
+  background: rgba(39, 174, 96, 0.12);
+  border: 1.5px solid rgba(39, 174, 96, 0.5);
+  border-radius: var(--radius-md, 8px);
+  padding: 2px 4px;
+}
+.rata-mensile-highlight input {
+  font-weight: 700;
+  color: #27ae60;
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+[data-theme="light"] .rata-mensile-highlight input {
+  color: #1e8449;
+}
+
 /* API Status */
 .api-status {
   min-height: 20px;

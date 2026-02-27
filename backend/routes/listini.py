@@ -246,6 +246,34 @@ def update_listino(
     return _listino_to_response(listino)
 
 
+@router.post("/{listino_id}/duplicate", response_model=ListinoResponse, status_code=status.HTTP_201_CREATED)
+def duplicate_listino(
+    listino_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ListinoResponse:
+    source = db.query(Listino).filter(Listino.id == listino_id).first()
+    if not source:
+        raise HTTPException(status_code=404, detail="Listino non trovato")
+
+    if current_user.role != "superadmin":
+        is_owner = source.owner_id == current_user.id
+        is_assigned = any(a.user_id == current_user.id for a in source.accesses)
+        if not is_owner and not is_assigned:
+            raise HTTPException(status_code=403, detail="Accesso negato")
+
+    new_listino = Listino(
+        name=f"Copia di {source.name}",
+        owner_id=current_user.id,
+    )
+    new_listino.set_items(source.get_items())
+    new_listino.set_listino_data(source.get_listino_data())
+    db.add(new_listino)
+    db.commit()
+    db.refresh(new_listino)
+    return _listino_to_response(new_listino)
+
+
 @router.delete("/{listino_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_listino(
     listino_id: int,
