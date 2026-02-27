@@ -1913,7 +1913,7 @@ async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, cl
   }
 
   const totalPotenza = systems.reduce((sum, s) => sum + Number(s.potenza_kw || 0), 0);
-  const mesiFinanziamento = mesiFinanziamentoModal;
+  const mesiFinanziamento = Math.round(anniFinanziamento * 12);
 
   // ═══════════════════════════════════════════════════════════════════════
   // PAGE 1: Cover Page with Background Image
@@ -2613,7 +2613,7 @@ async function generateManualPDF(clienteTitle, clienteName, clienteIndirizzo, cl
   doc.text("Documento generato il " + dateStr, pageWidth / 2, y, { align: "center" });
 
   // Save the PDF
-  const fileName = `Preventivo_Manuale_${clienteName.replace(/\s+/g, "_")}_${today.toISOString().split('T')[0]}.pdf`;
+  const fileName = `Preventivo_${clienteName.replace(/\s+/g, "_")}_${today.toISOString().split('T')[0]}.pdf`;
 
   // Check if datasheets should be included (from selector)
   const selectedDatasheets = getSelectedDatasheetsFromSelector("manualDatasheetSelector");

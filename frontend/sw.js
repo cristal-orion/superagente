@@ -2,7 +2,7 @@
 // Service Worker - PV Sales Calculator PWA
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME = 'pv-calculator-v11';
+const CACHE_NAME = 'pv-calculator-v12';
 const DATASHEETS_CACHE = 'pv-datasheets-v1';
 
 // Files to cache for offline use
